@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- XLSX Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- خط Cairo -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+    .active-tab {
+      color: #2563eb !important;
+      border-bottom: 3px solid #2563eb !important;
+      font-weight: 700 !important;
+    }
+    .row-selected {
+      background-color: #eff6ff !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen pb-24">
+
+  <!-- عنصر رفع الملفات -->
+  <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+
+  <!-- شريط الإجراءات الجماعية العائم (Bulk Actions Bar) -->
+  <div id="bulkActionsBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-4 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none">
+    <span class="text-sm font-semibold flex items-center gap-2">
+      <span class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-bold" id="selectedCountBadge">0</span>
+      <span>عملاء محددين</span>
+    </span>
+    <div class="h-4 w-[1px] bg-gray-700"></div>
+    <button type="button" id="btnBulkDelete" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer">
+      <span>🗑️</span>
+      <span>حذف المحددين</span>
+    </button>
+    <button type="button" id="btnBulkCancel" class="text-gray-400 hover:text-white text-xs font-semibold px-2 py-1 transition cursor-pointer">
+      إلغاء التحديد
+    </button>
+  </div>
+
+  <div class="max-w-7xl mx-auto space-y-5">
+
+    <!-- 1. قسم إحصائيات الشهر الحالي -->
+    <div class="bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm">
+      <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+        
+        <!-- إجمالي عملاء الشهر -->
+        <div class="text-right w-full lg:w-auto">
+          <div class="flex items-center gap-2 text-gray-800 font-bold text-lg md:text-xl">
+            <span class="text-xl">📊</span>
+            <h2>إحصائيات الشهر الحالي</h2>
+            <span id="syncStatus" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2">🟢 متصل سحابياً</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-4xl md:text-5xl font-extrabold text-blue-600" id="heroMonthTotal">0</div>
+            <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء هذا الشهر</div>
+          </div>
+        </div>
+
+        <!-- نسبة النجاح والرسم الدائري -->
+        <div class="flex flex-col items-center justify-center">
+          <div class="relative flex items-center justify-center">
+            <div id="progressRing" class="w-28 h-28 rounded-full flex items-center justify-center shadow-inner" 
+                 style="background: conic-gradient(#10b981 0deg, #e2e8f0 0deg);">
+              <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                <span class="text-xl font-bold text-gray-800" id="heroSuccessRate">0%</span>
+                <span class="text-[10px] text-gray-400 font-medium">نسبة النجاح</span>
+              </div>
+            </div>
+          </div>
+          <span class="text-xs text-gray-500 font-medium mt-2">من إجمالي التواصلات</span>
+        </div>
+
+        <!-- الحالات الأربعة والتاريخ -->
+        <div class="w-full lg:w-72 space-y-2">
+          <div class="text-left text-xs font-bold text-gray-500 mb-3" id="currentDateLabel">أغسطس ٢٠٢٦</div>
+          
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-transparent text-sm">
+            <span class="text-gray-700 font-medium">تم التواصل</span>
+            <span class="font-bold text-emerald-600 text-base" id="pillDone">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-red-50 text-sm border border-red-100">
+            <span class="text-gray-700 font-medium">لم يرد</span>
+            <span class="font-bold text-red-500 text-base" id="pillNoAnswer">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-amber-50 text-sm border border-amber-100">
+            <span class="text-gray-700 font-medium">لم يتم</span>
+            <span class="font-bold text-amber-500 text-base" id="pillPending">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-blue-50 text-sm border border-blue-100">
+            <span class="text-gray-700 font-medium">تذكير</span>
+            <span class="font-bold text-blue-500 text-base" id="pillReminder">0</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. بطاقات الإحصائيات الأربعة -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-gray-800" id="cardTotal">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-emerald-500" id="cardDone">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">تم التواصل</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-amber-500" id="cardPending">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">في الانتظار</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-blue-600" id="cardRevenue">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي المبالغ</div>
+      </div>
+    </div>
+
+    <!-- 3. شريط البحث والتبويبات والأزرار -->
+    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      
+      <div class="relative">
+        <input type="text" id="searchInput" placeholder="بحث بالاسم أو الرقم أو الموظف أو الملاحظات..." 
+               class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+        
+        <!-- التبويبات -->
+        <div class="flex items-center gap-6 text-sm font-semibold text-gray-500 overflow-x-auto pb-1">
+          <button type="button" id="tab-all" class="tab-btn active-tab pb-1 transition cursor-pointer">الكل</button>
+          <button type="button" id="tab-done" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">تم</button>
+          <button type="button" id="tab-pending" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">لم يتم</button>
+          <button type="button" id="tab-noanswer" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">لم يرد</button>
+          <button type="button" id="tab-reminder" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">تذكير</button>
+        </div>
+
+        <!-- الأزرار التفاعلية -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>👥</span>
+            <span>إحصائيات الموظفين</span>
+          </button>
+
+          <button type="button" id="btnImport" class="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>📥</span>
+            <span>استيراد بيانات</span>
+          </button>
+
+          <button type="button" id="btnExport" class="bg-[#0f766e] hover:bg-[#115e59] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>⬇️</span>
+            <span>تنزيل كل البيانات</span>
+          </button>
+
+          <button type="button" id="btnMonthlyReport" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>📊</span>
+            <span>التقرير الشهري التفصيلي</span>
+          </button>
+
+          <button type="button" id="btnAddClient" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
+            + إضافة عميل
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4. جدول البيانات -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-sm">
+          <thead class="bg-gray-50 text-gray-600 text-xs font-semibold">
+            <tr>
+              <th class="p-3.5 w-10 text-center">
+                <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 text-blue-600 rounded cursor-pointer">
+              </th>
+              <th class="p-3.5">#</th>
+              <th class="p-3.5">اسم العميل</th>
+              <th class="p-3.5">رقم الهاتف</th>
+              <th class="p-3.5">المبلغ</th>
+              <th class="p-3.5">الفئة</th>
+              <th class="p-3.5">حالة التواصل</th>
+              <th class="p-3.5">الموظف المسؤول</th>
+              <th class="p-3.5">تاريخ الإضافة</th>
+              <th class="p-3.5">الملاحظات</th>
+              <th class="p-3.5 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="text-center py-12 text-gray-400" style="display: none;">
+        لا توجد بيانات حالياً في السحابة. اضغط على "+ إضافة عميل" أو "استيراد بيانات" للبدء.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: إضافة / تعديل عميل -->
+  <div id="clientModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <h3 id="modalTitle" class="text-base font-bold text-gray-800">إضافة عميل جديد</h3>
+        <button type="button" id="closeClientModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <form id="clientForm" class="space-y-3.5">
+        <input type="hidden" id="editClientId" value="">
+        
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">اسم العميل</label>
+          <input type="text" id="clientName" required class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500" placeholder="مثال: أحمد محمد">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
+          <input type="tel" id="clientPhone" required placeholder="010XXXXXXXX" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">المبلغ المدفوع (ج.م)</label>
+          <input type="number" id="clientAmount" required min="0" step="any" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500" value="0">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">حالة التواصل</label>
+          <select id="clientStatus" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white">
+            <option value="لم يتم">لم يتم</option>
+            <option value="تم">تم</option>
+            <option value="لم يرد">لم يرد</option>
+            <option value="تذكير">تذكير</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">الموظف المسؤول</label>
+          <input type="text" id="clientEmployee" placeholder="اسم الموظف" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات العميل</label>
+          <textarea id="clientNotes" rows="2" placeholder="اكتب أي ملاحظات خاصة بالعميل..." class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 resize-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" id="cancelClientModalBtn" class="px-4 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow cursor-pointer">حفظ في السحابة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: إحصائيات الموظفين الإجمالية -->
+  <div id="employeeModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <h3 class="text-base font-bold text-gray-800">👥 تقرير أداء الموظفين الإجمالي</h3>
+        <button type="button" id="closeEmployeeModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-50 text-gray-600 font-semibold">
+            <tr>
+              <th class="p-2.5">الموظف</th>
+              <th class="p-2.5">إجمالي العملاء</th>
+              <th class="p-2.5">تم</th>
+              <th class="p-2.5">لم يرد</th>
+              <th class="p-2.5">في الانتظار</th>
+              <th class="p-2.5">تذكير</th>
+              <th class="p-2.5">المبالغ المحصلة</th>
+              <th class="p-2.5">نسبة الإنجاز</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: التقرير الشهري التفصيلي -->
+  <div id="monthlyModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <div class="flex items-center gap-3">
+          <h3 class="text-base font-bold text-gray-800">📊 التقرير الشهري التفصيلي</h3>
+          <select id="monthlySelectPicker" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 bg-white font-semibold outline-none focus:border-blue-500 cursor-pointer">
+          </select>
+        </div>
+        <button type="button" id="closeMonthlyModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+
+      <!-- ملخص أرقام الشهر -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="monthlySummaryCards">
+      </div>
+
+      <h4 class="text-xs font-bold text-gray-700 mb-2">أداء الموظفين خلال هذا الشهر:</h4>
+      <div class="overflow-x-auto border border-gray-100 rounded-xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-50 text-gray-600 font-semibold">
+            <tr>
+              <th class="p-2.5">اسم الموظف</th>
+              <th class="p-2.5">عملاء الشهر</th>
+              <th class="p-2.5">تم التواصل</th>
+              <th class="p-2.5">لم يرد</th>
+              <th class="p-2.5">في الانتظار</th>
+              <th class="p-2.5">المبالغ المحصلة</th>
+              <th class="p-2.5">نسبة الإنجاز</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyEmployeeTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script>
+    (function() {
+      // ✅ بيانات Supabase المدمجة
+      const SUPABASE_URL = 'https://hmukbdfzgrflvgultnkq.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_0pfVPOIwbOVYBAnJs-YtGQ_XIjLL3A7';
+
+      let supabase = null;
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+
+      let clients = [];
+      let selectedIds = new Set();
+      let currentTab = 'الكل';
+      const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+      function initDateHeader() {
+        const now = new Date();
+        const label = document.getElementById('currentDateLabel');
+        if (label) label.innerText = `${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
+      }
+
+      function calculateTier(amount) {
+        const val = parseFloat(amount) || 0;
+        if (val >= 5000) return 'VIP';
+        if (val >= 2500) return 'فئة ذهبية';
+        if (val >= 1000) return 'فئة فضية';
+        return 'فئة برونزية';
+      }
+
+      function getTierBadge(tier) {
+        switch(tier) {
+          case 'VIP': return '<span class="bg-purple-100 text-purple-700 text-[11px] px-2 py-0.5 rounded font-semibold">VIP</span>';
+          case 'فئة ذهبية': return '<span class="bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded font-semibold">ذهبية</span>';
+          case 'فئة فضية': return '<span class="bg-slate-200 text-slate-700 text-[11px] px-2 py-0.5 rounded font-semibold">فضية</span>';
+          default: return '<span class="bg-orange-100 text-orange-700 text-[11px] px-2 py-0.5 rounded font-semibold">برونزية</span>';
+        }
+      }
+
+      function formatWhatsAppPhone(phone) {
+        let cleaned = String(phone).replace(/[^0-9]/g, '');
+        if (cleaned.startsWith('01')) cleaned = '2' + cleaned;
+        return cleaned;
+      }
+
+      async function fetchClientsFromCloud() {
+        if (!supabase) return;
+        try {
+          const { data, error } = await supabase
+            .from('clients')
+            .select('*')
+            .order('id', { ascending: false });
+
+          if (!error && data) {
+            clients = data;
+            const currentIdStrings = new Set(clients.map(c => String(c.id)));
+            selectedIds.forEach(id => {
+              if (!currentIdStrings.has(id)) selectedIds.delete(id);
+            });
+            updateDashboardStats();
+            renderTable();
+            updateBulkActionBar();
+          }
+        } catch (err) {
+          console.error("Fetch error:", err);
+        }
+      }
+
+      function setupRealtimeListener() {
+        if (!supabase) return;
+        supabase
+          .channel('clients_db_changes_v3')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
+            fetchClientsFromCloud();
+          })
+          .subscribe();
+      }
+
+      function updateDashboardStats() {
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const currentMonthClients = clients.filter(c => (c.date || '').startsWith(currentYearMonth));
+        const heroEl = document.getElementById('heroMonthTotal');
+        if (heroEl) heroEl.innerText = currentMonthClients.length;
+
+        const doneCount = clients.filter(c => c.status === 'تم').length;
+        const noAnswerCount = clients.filter(c => c.status === 'لم يرد').length;
+        const pendingCount = clients.filter(c => c.status === 'لم يتم').length;
+        const reminderCount = clients.filter(c => c.status === 'تذكير').length;
+
+        const pDone = document.getElementById('pillDone');
+        const pNo = document.getElementById('pillNoAnswer');
+        const pPend = document.getElementById('pillPending');
+        const pRem = document.getElementById('pillReminder');
+
+        if (pDone) pDone.innerText = doneCount;
+        if (pNo) pNo.innerText = noAnswerCount;
+        if (pPend) pPend.innerText = pendingCount;
+        if (pRem) pRem.innerText = reminderCount;
+
+        const totalAttempted = doneCount + noAnswerCount + reminderCount;
+        let successRate = totalAttempted > 0 ? Math.round((doneCount / totalAttempted) * 100) : 0;
+        
+        const heroSucc = document.getElementById('heroSuccessRate');
+        if (heroSucc) heroSucc.innerText = `${successRate}%`;
+        
+        const deg = (successRate / 100) * 360;
+        const ring = document.getElementById('progressRing');
+        if (ring) ring.style.background = `conic-gradient(#10b981 ${deg}deg, #e2e8f0 0deg)`;
+
+        const cardT = document.getElementById('cardTotal');
+        const cardD = document.getElementById('cardDone');
+        const cardP = document.getElementById('cardPending');
+        const cardR = document.getElementById('cardRevenue');
+
+        if (cardT) cardT.innerText = clients.length;
+        if (cardD) cardD.innerText = doneCount;
+        if (cardP) cardP.innerText = pendingCount;
+
+        const totalRevenue = clients.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+        if (cardR) cardR.innerText = totalRevenue.toLocaleString('ar-EG');
+      }
+
+      function setTab(tab, elementId) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+        const activeBtn = document.getElementById(elementId);
+        if (activeBtn) activeBtn.classList.add('active-tab');
+        renderTable();
+      }
+
+      function updateBulkActionBar() {
+        const bar = document.getElementById('bulkActionsBar');
+        const badge = document.getElementById('selectedCountBadge');
+        if (!bar || !badge) return;
+
+        if (selectedIds.size > 0) {
+          badge.innerText = selectedIds.size;
+          bar.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+          bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        } else {
+          bar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+          bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        }
+      }
+
+      function renderTable() {
+        const searchInput = document.getElementById('searchInput');
+        const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        let filtered = [...clients];
+        if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
+        if (search) {
+          filtered = filtered.filter(c => 
+            (c.name || '').toLowerCase().includes(search) || 
+            String(c.phone || '').includes(search) ||
+            (c.employee || '').toLowerCase().includes(search) ||
+            (c.notes || '').toLowerCase().includes(search)
+          );
+        }
+
+        const emptyEl = document.getElementById('emptyState');
+        if (emptyEl) {
+          emptyEl.style.display = (filtered.length === 0) ? 'block' : 'none';
+        }
+
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) {
+          selectAll.checked = filtered.length > 0 && filtered.every(c => selectedIds.has(String(c.id)));
+        }
+
+        filtered.forEach((c, idx) => {
+          const tier = calculateTier(c.amount);
+          const waPhone = formatWhatsAppPhone(c.phone);
+          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent('مرحباً ' + c.name + '، بخصوص استفسارك معنا...')}`;
+          const isSelected = selectedIds.has(String(c.id));
+
+          const tr = document.createElement('tr');
+          tr.className = `hover:bg-gray-50 border-b border-gray-100 transition text-gray-700 cursor-pointer ${isSelected ? 'row-selected' : ''}`;
+          tr.setAttribute('data-id', c.id);
+          
+          tr.innerHTML = `
+            <td class="p-3.5 text-center" onclick="event.stopPropagation()">
+              <input type="checkbox" data-id="${c.id}" class="row-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer" ${isSelected ? 'checked' : ''}>
+            </td>
+            <td class="p-3.5 text-gray-400 text-xs">${idx + 1}</td>
+            <td class="p-3.5 font-bold text-gray-900">${c.name}</td>
+            <td class="p-3.5 font-mono text-gray-600 text-xs" dir="ltr">${c.phone}</td>
+            <td class="p-3.5 font-bold text-blue-700">${Number(c.amount).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5">${getTierBadge(tier)}</td>
+            <td class="p-3.5" onclick="event.stopPropagation()">
+              <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
+                <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
+                <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
+                <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
+                <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
+              </select>
+            </td>
+            <td class="p-3.5 text-xs text-gray-600">${c.employee || 'غير محدد'}</td>
+            <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
+            <td class="p-3.5 text-xs text-gray-500 max-w-[180px] truncate" title="${c.notes || ''}">
+              ${c.notes ? `<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${c.notes}</span>` : '<span class="text-gray-300">-</span>'}
+            </td>
+            <td class="p-3.5 text-center" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-center gap-1.5">
+                <a href="${waLink}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+                  💬 واتساب
+                </a>
+                <button type="button" data-id="${c.id}" class="edit-btn text-blue-600 hover:text-blue-800 text-xs font-semibold px-1 cursor-pointer">تعديل</button>
+                <button type="button" data-id="${c.id}" class="del-btn text-red-500 hover:text-red-700 text-xs font-semibold px-1 cursor-pointer">حذف</button>
+              </div>
+            </td>
+          `;
+
+          // تحديد الصف بالنقر
+          tr.addEventListener('click', function() {
+            toggleRowSelection(String(c.id));
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        // ربط الـ Checkboxes
+        tbody.querySelectorAll('.row-checkbox').forEach(cb => {
+          cb.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const id = this.getAttribute('data-id');
+            if (this.checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+            renderTable();
+            updateBulkActionBar();
+          });
+        });
+
+        tbody.querySelectorAll('.status-select').forEach(sel => {
+          sel.addEventListener('change', async function() {
+            const id = this.getAttribute('data-id');
+            const newStatus = this.value;
+            if (supabase) {
+              await supabase.from('clients').update({ status: newStatus }).eq('id', id);
+              fetchClientsFromCloud();
+            }
+          });
+        });
+
+        tbody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const client = clients.find(c => String(c.id) === String(id));
+            if (client) openEditModal(client);
+          });
+        });
+
+        tbody.querySelectorAll('.del-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-id');
+            if (confirm('هل ترغب بالتأكيد في حذف هذا العميل من السحابة؟')) {
+              if (supabase) {
+                await supabase.from('clients').delete().eq('id', id);
+                fetchClientsFromCloud();
+              }
+            }
+          });
+        });
+      }
+
+      function toggleRowSelection(id) {
+        if (selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+        renderTable();
+        updateBulkActionBar();
+      }
+
+      function openAddModal() {
+        document.getElementById('clientForm').reset();
+        document.getElementById('editClientId').value = '';
+        document.getElementById('clientNotes').value = '';
+        document.getElementById('modalTitle').innerText = 'إضافة عميل جديد للسحابة';
+        document.getElementById('clientModal').style.display = 'flex';
+      }
+
+      function openEditModal(client) {
+        document.getElementById('editClientId').value = client.id;
+        document.getElementById('clientName').value = client.name;
+        document.getElementById('clientPhone').value = client.phone;
+        document.getElementById('clientAmount').value = client.amount;
+        document.getElementById('clientStatus').value = client.status;
+        document.getElementById('clientEmployee').value = client.employee;
+        document.getElementById('clientNotes').value = client.notes || '';
+        document.getElementById('modalTitle').innerText = 'تعديل بيانات العميل';
+        document.getElementById('clientModal').style.display = 'flex';
+      }
+
+      function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = 'none';
+      }
+
+      function openDetailedMonthlyReport() {
+        const selectPicker = document.getElementById('monthlySelectPicker');
+        selectPicker.innerHTML = '';
+
+        const monthSet = new Set();
+        const now = new Date();
+        const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        monthSet.add(currentYM);
+
+        clients.forEach(c => {
+          if (c.date && c.date.length >= 7) {
+            monthSet.add(c.date.substring(0, 7));
+          }
+        });
+
+        const sortedMonths = Array.from(monthSet).sort().reverse();
+        sortedMonths.forEach(ym => {
+          const parts = ym.split('-');
+          const y = parts[0];
+          const m = parseInt(parts) - 1;
+          const opt = document.createElement('option');
+          opt.value = ym;
+          opt.innerText = `${arabicMonths[m]} ${y}`;
+          selectPicker.appendChild(opt);
+        });
+
+        selectPicker.value = currentYM;
+        renderMonthDetails(currentYM);
+
+        selectPicker.onchange = function() {
+          renderMonthDetails(this.value);
+        };
+
+        document.getElementById('monthlyModal').style.display = 'flex';
+      }
+
+      function renderMonthDetails(targetYM) {
+        const monthClients = clients.filter(c => (c.date || '').startsWith(targetYM));
+        const total = monthClients.length;
+        const done = monthClients.filter(c => c.status === 'تم').length;
+        const noAns = monthClients.filter(c => c.status === 'لم يرد').length;
+        const pending = monthClients.filter(c => c.status === 'لم يتم').length;
+        const reminder = monthClients.filter(c => c.status === 'تذكير').length;
+        const revenue = monthClients.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+        const summaryCards = document.getElementById('monthlySummaryCards');
+        summaryCards.innerHTML = `
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+            <span class="text-[10px] text-gray-500 font-semibold">عملاء الشهر</span>
+            <div class="text-xl font-bold text-gray-800 mt-0.5">${total}</div>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+            <span class="text-[10px] text-emerald-700 font-semibold">تم التواصل</span>
+            <div class="text-xl font-bold text-emerald-600 mt-0.5">${done}</div>
+          </div>
+          <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center">
+            <span class="text-[10px] text-amber-700 font-semibold">في الانتظار / لم يرد</span>
+            <div class="text-xl font-bold text-amber-600 mt-0.5">${pending + noAns}</div>
+          </div>
+          <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
+            <span class="text-[10px] text-blue-700 font-semibold">إجمالي المحصل</span>
+            <div class="text-xl font-bold text-blue-700 mt-0.5">${revenue.toLocaleString('ar-EG')} ج.م</div>
+          </div>
+        `;
+
+        const empMap = {};
+        monthClients.forEach(c => {
+          const emp = c.employee || 'غير محدد';
+          if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
+          empMap[emp].total++;
+          if (c.status === 'تم') empMap[emp].done++;
+          else if (c.status === 'لم يرد') empMap[emp].noAnswer++;
+          else if (c.status === 'لم يتم') empMap[emp].pending++;
+          else if (c.status === 'تذكير') empMap[emp].reminder++;
+          empMap[emp].revenue += (parseFloat(c.amount) || 0);
+        });
+
+        const tbody = document.getElementById('monthlyEmployeeTableBody');
+        tbody.innerHTML = '';
+        const empKeys = Object.keys(empMap);
+
+        if (empKeys.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-400">لا توجد سجلات في هذا الشهر.</td></tr>';
+        } else {
+          empKeys.forEach(emp => {
+            const d = empMap[emp];
+            const rate = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+            tr.innerHTML = `
+              <td class="p-2.5 font-bold text-gray-800">${emp}</td>
+              <td class="p-2.5 font-semibold text-gray-700">${d.total}</td>
+              <td class="p-2.5 text-emerald-600 font-bold">${d.done}</td>
+              <td class="p-2.5 text-red-500 font-bold">${d.noAnswer}</td>
+              <td class="p-2.5 text-amber-500 font-bold">${d.pending}</td>
+              <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
+              <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      function startApp() {
+        initDateHeader();
+        fetchClientsFromCloud();
+        setupRealtimeListener();
+
+        // التبويبات
+        document.getElementById('tab-all').addEventListener('click', () => setTab('الكل', 'tab-all'));
+        document.getElementById('tab-done').addEventListener('click', () => setTab('تم', 'tab-done'));
+        document.getElementById('tab-pending').addEventListener('click', () => setTab('لم يتم', 'tab-pending'));
+        document.getElementById('tab-noanswer').addEventListener('click', () => setTab('لم يرد', 'tab-noanswer'));
+        document.getElementById('tab-reminder').addEventListener('click', () => setTab('تذكير', 'tab-reminder'));
+
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+
+        // Select All Checkbox
+        document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+          const searchInput = document.getElementById('searchInput');
+          const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
+          let filtered = [...clients];
+          if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
+          if (search) {
+            filtered = filtered.filter(c => 
+              (c.name || '').toLowerCase().includes(search) || 
+              String(c.phone || '').includes(search) ||
+              (c.employee || '').toLowerCase().includes(search) ||
+              (c.notes || '').toLowerCase().includes(search)
+            );
+          }
+
+          if (this.checked) {
+            filtered.forEach(c => selectedIds.add(String(c.id)));
+          } else {
+            filtered.forEach(c => selectedIds.delete(String(c.id)));
+          }
+          renderTable();
+          updateBulkActionBar();
+        });
+
+        // Bulk Delete Button
+        document.getElementById('btnBulkDelete').addEventListener('click', async function() {
+          const count = selectedIds.size;
+          if (count === 0) return;
+
+          if (confirm(`هل أنت متأكد من حذف ${count} عميل محدد من السحابة نهائياً؟`)) {
+            if (supabase) {
+              const idsArray = Array.from(selectedIds);
+              const { error } = await supabase.from('clients').delete().in('id', idsArray);
+              if (error) {
+                alert('خطأ أثناء الحذف: ' + error.message);
+              } else {
+                selectedIds.clear();
+                updateBulkActionBar();
+                fetchClientsFromCloud();
+              }
+            }
+          }
+        });
+
+        // Bulk Cancel Button
+        document.getElementById('btnBulkCancel').addEventListener('click', function() {
+          selectedIds.clear();
+          renderTable();
+          updateBulkActionBar();
+        });
+
+        // النوافذ
+        document.getElementById('btnAddClient').addEventListener('click', openAddModal);
+        document.getElementById('closeClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
+        document.getElementById('cancelClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
+
+        // إرسال نموذج العميل
+        document.getElementById('clientForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const id = document.getElementById('editClientId').value;
+          const todayStr = new Date().toISOString().split('T')[0];
+
+          const clientPayload = {
+            name: document.getElementById('clientName').value.trim(),
+            phone: document.getElementById('clientPhone').value.trim(),
+            amount: parseFloat(document.getElementById('clientAmount').value) || 0,
+            status: document.getElementById('clientStatus').value,
+            employee: document.getElementById('clientEmployee').value.trim() || 'غير محدد',
+            notes: document.getElementById('clientNotes').value.trim(),
+            date: todayStr
+          };
+
+          if (supabase) {
+            if (id) {
+              await supabase.from('clients').update(clientPayload).eq('id', id);
+            } else {
+              await supabase.from('clients').insert([clientPayload]);
+            }
+            fetchClientsFromCloud();
+          }
+
+          closeModal('clientModal');
+        });
+
+        // استيراد شيت
+        document.getElementById('btnImport').addEventListener('click', () => {
+          document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (!file || !supabase) return;
+
+          const reader = new FileReader();
+          reader.onload = async function(evt) {
+            try {
+              const data = new Uint8Array(evt.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+              const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+              const todayStr = new Date().toISOString().split('T')[0];
+
+              const rowsToInsert = [];
+              jsonData.forEach(row => {
+                const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
+                const phone = row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || '';
+                const amountRaw = row['المبلغ'] || row['Amount'] || 0;
+                const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
+                
+                let status = String(row['حالة التواصل'] || row['Status'] || 'لم يتم').trim();
+                if (status.includes('تم') && !status.includes('لم')) status = 'تم';
+                else if (status.includes('لم يرد')) status = 'لم يرد';
+                else if (status.includes('تذكير')) status = 'تذكير';
+                else status = 'لم يتم';
+
+                const employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || 'غير محدد';
+                const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
+
+                if (name || phone) {
+                  rows
