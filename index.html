@@ -190,7 +190,7 @@
               <th class="p-3.5">رقم الهاتف</th>
               <th class="p-3.5">المبلغ</th>
               <th class="p-3.5">الفئة</th>
-              <th class="p-3.5">حالة التواصل</th>
+              <th class="p-3.5">حالة التواصل ووقت التسجيل</th>
               <th class="p-3.5">الموظف المسؤول</th>
               <th class="p-3.5">تاريخ الإضافة</th>
               <th class="p-3.5">الملاحظات</th>
@@ -217,6 +217,7 @@
       </div>
       <form id="clientForm" class="space-y-3.5">
         <input type="hidden" id="editClientId" value="">
+        <input type="hidden" id="editContactedAt" value="">
         
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">اسم العميل</label>
@@ -352,6 +353,14 @@
         if (label) label.innerText = `${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
       }
 
+      // دالة توليد الوقت والتاريخ الحالي بتنسيق عربي واضح
+      function getCurrentFormattedTimestamp() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+        return `${dateStr}، ${timeStr}`;
+      }
+
       function calculateTier(amount) {
         const val = parseFloat(amount) || 0;
         if (val >= 5000) return 'VIP';
@@ -413,7 +422,7 @@
       function setupRealtimeListener() {
         if (!supabase) return;
         supabase
-          .channel('clients_db_changes_final')
+          .channel('clients_db_changes_timestamped')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
             fetchClientsFromCloud();
           })
@@ -537,12 +546,20 @@
             <td class="p-3.5 font-bold text-blue-700">${Number(c.amount).toLocaleString('ar-EG')} ج.م</td>
             <td class="p-3.5">${getTierBadge(tier)}</td>
             <td class="p-3.5" onclick="event.stopPropagation()">
-              <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
-                <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
-                <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
-                <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
-                <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
-              </select>
+              <div>
+                <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
+                  <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
+                  <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
+                  <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
+                  <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
+                </select>
+                ${c.status === 'تم' && c.contacted_at ? `
+                  <div class="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 w-fit">
+                    <span>🕒</span>
+                    <span>${c.contacted_at}</span>
+                  </div>
+                ` : ''}
+              </div>
             </td>
             <td class="p-3.5 text-xs text-gray-600">${c.employee || 'غير محدد'}</td>
             <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
@@ -578,12 +595,19 @@
           });
         });
 
+        // تحديث الحالة وتوثيق الوقت والتاريخ التلقائي عند اختيار "تم"
         tbody.querySelectorAll('.status-select').forEach(sel => {
           sel.addEventListener('change', async function() {
             const id = this.getAttribute('data-id');
             const newStatus = this.value;
+            let updateData = { status: newStatus };
+
+            if (newStatus === 'تم') {
+              updateData.contacted_at = getCurrentFormattedTimestamp();
+            }
+
             if (supabase) {
-              const { error } = await supabase.from('clients').update({ status: newStatus }).eq('id', id);
+              const { error } = await supabase.from('clients').update(updateData).eq('id', id);
               if (error) alert('خطأ في تحديث الحالة: ' + error.message);
               else fetchClientsFromCloud();
             }
@@ -622,6 +646,7 @@
       function openAddModal() {
         document.getElementById('clientForm').reset();
         document.getElementById('editClientId').value = '';
+        document.getElementById('editContactedAt').value = '';
         document.getElementById('clientNotes').value = '';
         document.getElementById('modalTitle').innerText = 'إضافة عميل جديد للسحابة';
         document.getElementById('clientModal').style.display = 'flex';
@@ -629,6 +654,7 @@
 
       function openEditModal(client) {
         document.getElementById('editClientId').value = client.id;
+        document.getElementById('editContactedAt').value = client.contacted_at || '';
         document.getElementById('clientName').value = client.name;
         document.getElementById('clientPhone').value = client.phone;
         document.getElementById('clientAmount').value = client.amount;
@@ -824,15 +850,22 @@
           submitBtn.innerText = 'جاري الحفظ...';
 
           const id = document.getElementById('editClientId').value;
+          const statusVal = document.getElementById('clientStatus').value;
+          let contactedAtVal = document.getElementById('editContactedAt').value;
           const todayStr = new Date().toISOString().split('T')[0];
+
+          if (statusVal === 'تم' && !contactedAtVal) {
+            contactedAtVal = getCurrentFormattedTimestamp();
+          }
 
           const clientPayload = {
             name: document.getElementById('clientName').value.trim(),
             phone: document.getElementById('clientPhone').value.trim(),
             amount: parseFloat(document.getElementById('clientAmount').value) || 0,
-            status: document.getElementById('clientStatus').value,
+            status: statusVal,
             employee: document.getElementById('clientEmployee').value.trim() || 'غير محدد',
             notes: document.getElementById('clientNotes').value.trim(),
+            contacted_at: contactedAtVal,
             date: todayStr
           };
 
@@ -888,10 +921,17 @@
                 const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
                 
                 let status = String(row['حالة التواصل'] || row['Status'] || 'لم يتم').trim();
-                if (status.includes('تم') && !status.includes('لم')) status = 'تم';
-                else if (status.includes('لم يرد')) status = 'لم يرد';
-                else if (status.includes('تذكير')) status = 'تذكير';
-                else status = 'لم يتم';
+                let contactedAt = '';
+                if (status.includes('تم') && !status.includes('لم')) {
+                  status = 'تم';
+                  contactedAt = row['تاريخ ووقت التواصل'] || row['وقت التواصل'] || getCurrentFormattedTimestamp();
+                } else if (status.includes('لم يرد')) {
+                  status = 'لم يرد';
+                } else if (status.includes('تذكير')) {
+                  status = 'تذكير';
+                } else {
+                  status = 'لم يتم';
+                }
 
                 const employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || 'غير محدد';
                 const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
@@ -904,6 +944,7 @@
                     status: status,
                     employee: String(employee).trim(),
                     notes: String(notes).trim(),
+                    contacted_at: contactedAt,
                     date: todayStr
                   });
                 }
@@ -936,6 +977,7 @@
             'المبلغ المدفوع': c.amount,
             'الفئة': calculateTier(c.amount),
             'حالة التواصل': c.status,
+            'تاريخ ووقت التواصل': c.contacted_at || '',
             'الموظف المسؤول': c.employee,
             'تاريخ الإضافة': c.date || '',
             'الملاحظات': c.notes || ''
