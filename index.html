@@ -148,6 +148,12 @@
 
         <!-- الأزرار التفاعلية -->
         <div class="flex flex-wrap items-center gap-2">
+          <!-- زر سجل الأدمن -->
+          <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
+            <span>🛡️</span>
+            <span>سجل الأدمن (History)</span>
+          </button>
+
           <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
             <span>👥</span>
             <span>إحصائيات الموظفين</span>
@@ -206,6 +212,91 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Modal: قفل الأدمن برقم سري (PIN Modal) -->
+  <div id="adminPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
+      <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
+        🔒
+      </div>
+      <h3 class="text-base font-bold text-gray-800 mb-1">تسجيل دخول الأدمن</h3>
+      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري للوصول إلى سجل حركات الموظفين</p>
+      <form id="adminPinForm" class="space-y-3">
+        <input type="password" id="adminPinInput" required placeholder="الرقم السري (الافتراضي: 1234)" 
+               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-sm tracking-widest outline-none focus:border-blue-500">
+        <div class="flex gap-2">
+          <button type="button" id="closeAdminPinBtn" class="w-1/2 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
+          <button type="submit" class="w-1/2 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer">دخول</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: لوحة وسجل نشاطات الموظفين الكامل (Audit Log) -->
+  <div id="adminHistoryModal" class="fixed inset-0 bg-black/70 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-4 border-b">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
+            🛡️
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-900">سجل حركات ونشاطات الموظفين (Audit Log)</h3>
+            <p class="text-xs text-gray-500">متابعة دقيقة لكل تعديل، تغيير حالة، إضافة، أو حذف مع الوقت واسم الموظف</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+            <span>📥</span>
+            <span>تصدير السجل</span>
+          </button>
+          <button type="button" id="closeAdminHistoryBtn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">✕</button>
+        </div>
+      </div>
+
+      <!-- Filters for Logs -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+        <input type="text" id="logSearchInput" placeholder="بحث في السجل (اسم الموظف، العميل، التفاصيل)..." class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500">
+        
+        <select id="logActionFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
+          <option value="">كل أنواع الحركات</option>
+          <option value="تغيير حالة">تغيير حالة</option>
+          <option value="إضافة عميل">إضافة عميل</option>
+          <option value="تعديل بيانات">تعديل بيانات</option>
+          <option value="حذف عميل">حذف عميل</option>
+          <option value="حذف متعدد">حذف متعدد</option>
+          <option value="استيراد شيت">استيراد شيت</option>
+        </select>
+
+        <select id="logEmployeeFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
+          <option value="">كل الموظفين</option>
+        </select>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="overflow-y-auto flex-1 border border-gray-100 rounded-xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-100 text-gray-700 font-bold sticky top-0">
+            <tr>
+              <th class="p-3">التوقيت والتاريخ</th>
+              <th class="p-3">الموظف</th>
+              <th class="p-3">نوع الحركة</th>
+              <th class="p-3">العميل المستهدف</th>
+              <th class="p-3">التفاصيل والتغيير</th>
+            </tr>
+          </thead>
+          <tbody id="adminLogsTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+        <div id="emptyLogsState" class="text-center py-10 text-gray-400" style="display: none;">
+          لا توجد حركات مسجلة حتى الآن.
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Modal: إضافة / تعديل عميل -->
@@ -343,8 +434,10 @@
       }
 
       let clients = [];
+      let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
+      const ADMIN_PIN = '1234'; // الرقم السري الافتراضي للأدمن
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
       function initDateHeader() {
@@ -353,12 +446,48 @@
         if (label) label.innerText = `${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
       }
 
-      // دالة توليد الوقت والتاريخ الحالي بتنسيق عربي واضح
       function getCurrentFormattedTimestamp() {
         const now = new Date();
-        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
         return `${dateStr}، ${timeStr}`;
+      }
+
+      // دالة تسجيل أي حركة في سجل الأدمن (Audit Logger)
+      async function logActivity(actionType, employee, clientName, details) {
+        const logEntry = {
+          action_type: actionType,
+          employee: employee || 'غير محدد',
+          client_name: clientName || '-',
+          details: details || '',
+          timestamp: getCurrentFormattedTimestamp()
+        };
+
+        if (supabase) {
+          try {
+            await supabase.from('activity_logs').insert([logEntry]);
+          } catch (e) {
+            console.error("Log error:", e);
+          }
+        }
+      }
+
+      // جلب سجل الحركات للأدمن
+      async function fetchActivityLogs() {
+        if (!supabase) return;
+        try {
+          const { data, error } = await supabase
+            .from('activity_logs')
+            .select('*')
+            .order('id', { ascending: false });
+
+          if (!error && data) {
+            activityLogs = data;
+            renderAdminLogsTable();
+          }
+        } catch (e) {
+          console.error("Fetch logs error:", e);
+        }
       }
 
       function calculateTier(amount) {
@@ -375,6 +504,18 @@
           case 'فئة ذهبية': return '<span class="bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded font-semibold">ذهبية</span>';
           case 'فئة فضية': return '<span class="bg-slate-200 text-slate-700 text-[11px] px-2 py-0.5 rounded font-semibold">فضية</span>';
           default: return '<span class="bg-orange-100 text-orange-700 text-[11px] px-2 py-0.5 rounded font-semibold">برونزية</span>';
+        }
+      }
+
+      function getActionBadge(type) {
+        switch(type) {
+          case 'تغيير حالة': return '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔄 تغيير حالة</span>';
+          case 'إضافة عميل': return '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">➕ إضافة عميل</span>';
+          case 'تعديل بيانات': return '<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">✏️ تعديل بيانات</span>';
+          case 'حذف عميل': return '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🗑️ حذف عميل</span>';
+          case 'حذف متعدد': return '<span class="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">❌ حذف متعدد</span>';
+          case 'استيراد شيت': return '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">📥 استيراد شيت</span>';
+          default: return `<span class="bg-gray-100 text-gray-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${type}</span>`;
         }
       }
 
@@ -595,10 +736,12 @@
           });
         });
 
-        // تحديث الحالة وتوثيق الوقت والتاريخ التلقائي عند اختيار "تم"
+        // تحديث الحالة مع تسجيل الحركة في سجل الأدمن
         tbody.querySelectorAll('.status-select').forEach(sel => {
           sel.addEventListener('change', async function() {
             const id = this.getAttribute('data-id');
+            const targetClient = clients.find(c => String(c.id) === String(id));
+            const oldStatus = targetClient ? targetClient.status : 'غير معروف';
             const newStatus = this.value;
             let updateData = { status: newStatus };
 
@@ -608,8 +751,17 @@
 
             if (supabase) {
               const { error } = await supabase.from('clients').update(updateData).eq('id', id);
-              if (error) alert('خطأ في تحديث الحالة: ' + error.message);
-              else fetchClientsFromCloud();
+              if (error) {
+                alert('خطأ في تحديث الحالة: ' + error.message);
+              } else {
+                logActivity(
+                  'تغيير حالة',
+                  targetClient ? targetClient.employee : 'غير محدد',
+                  targetClient ? targetClient.name : '-',
+                  `تم تغيير الحالة من [${oldStatus}] إلى [${newStatus}]`
+                );
+                fetchClientsFromCloud();
+              }
             }
           });
         });
@@ -625,11 +777,21 @@
         tbody.querySelectorAll('.del-btn').forEach(btn => {
           btn.addEventListener('click', async function() {
             const id = this.getAttribute('data-id');
+            const targetClient = clients.find(c => String(c.id) === String(id));
             if (confirm('هل ترغب بالتأكيد في حذف هذا العميل من السحابة؟')) {
               if (supabase) {
                 const { error } = await supabase.from('clients').delete().eq('id', id);
-                if (error) alert('خطأ في الحذف: ' + error.message);
-                else fetchClientsFromCloud();
+                if (error) {
+                  alert('خطأ في الحذف: ' + error.message);
+                } else {
+                  logActivity(
+                    'حذف عميل',
+                    targetClient ? targetClient.employee : 'غير محدد',
+                    targetClient ? targetClient.name : '-',
+                    `تم حذف العميل برقم هاتف [${targetClient ? targetClient.phone : '-'}] ومبلغ [${targetClient ? targetClient.amount : 0} ج.م]`
+                  );
+                  fetchClientsFromCloud();
+                }
               }
             }
           });
@@ -668,6 +830,60 @@
       function closeModal(id) {
         const modal = document.getElementById(id);
         if (modal) modal.style.display = 'none';
+      }
+
+      function renderAdminLogsTable() {
+        const tbody = document.getElementById('adminLogsTableBody');
+        const emptyEl = document.getElementById('emptyLogsState');
+        const search = (document.getElementById('logSearchInput').value || '').toLowerCase().trim();
+        const actionFilter = document.getElementById('logActionFilter').value;
+        const empFilter = document.getElementById('logEmployeeFilter').value;
+
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const empSelect = document.getElementById('logEmployeeFilter');
+        const currentEmpVal = empSelect.value;
+        const employees = [...new Set(activityLogs.map(l => l.employee).filter(Boolean))];
+        empSelect.innerHTML = '<option value="">كل الموظفين</option>';
+        employees.forEach(emp => {
+          const opt = document.createElement('option');
+          opt.value = emp;
+          opt.innerText = emp;
+          empSelect.appendChild(opt);
+        });
+        empSelect.value = currentEmpVal;
+
+        let filtered = [...activityLogs];
+        if (actionFilter) filtered = filtered.filter(l => l.action_type === actionFilter);
+        if (empFilter) filtered = filtered.filter(l => l.employee === empFilter);
+        if (search) {
+          filtered = filtered.filter(l => 
+            (l.employee || '').toLowerCase().includes(search) || 
+            (l.client_name || '').toLowerCase().includes(search) || 
+            (l.details || '').toLowerCase().includes(search) || 
+            (l.action_type || '').toLowerCase().includes(search)
+          );
+        }
+
+        if (filtered.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          emptyEl.style.display = 'none';
+        }
+
+        filtered.forEach(log => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+          tr.innerHTML = `
+            <td class="p-3 text-gray-500 font-mono text-[11px] whitespace-nowrap">${log.timestamp || '-'}</td>
+            <td class="p-3 font-bold text-gray-800">${log.employee || 'غير محدد'}</td>
+            <td class="p-3">${getActionBadge(log.action_type)}</td>
+            <td class="p-3 font-semibold text-blue-700">${log.client_name || '-'}</td>
+            <td class="p-3 text-gray-600 text-[11px] max-w-xs">${log.details || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
       }
 
       function openDetailedMonthlyReport() {
@@ -778,6 +994,54 @@
         fetchClientsFromCloud();
         setupRealtimeListener();
 
+        // فتح سجل الأدمن
+        document.getElementById('btnAdminHistory').addEventListener('click', function() {
+          document.getElementById('adminPinInput').value = '';
+          document.getElementById('adminPinModal').style.display = 'flex';
+          document.getElementById('adminPinInput').focus();
+        });
+
+        document.getElementById('closeAdminPinBtn').addEventListener('click', () => {
+          document.getElementById('adminPinModal').style.display = 'none';
+        });
+
+        document.getElementById('adminPinForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          const enteredPin = document.getElementById('adminPinInput').value;
+          if (enteredPin === ADMIN_PIN) {
+            document.getElementById('adminPinModal').style.display = 'none';
+            fetchActivityLogs();
+            document.getElementById('adminHistoryModal').style.display = 'flex';
+          } else {
+            alert('الرقم السري غير صحيح! يرجى المحاولة مرة أخرى.');
+          }
+        });
+
+        document.getElementById('closeAdminHistoryBtn').addEventListener('click', () => {
+          document.getElementById('adminHistoryModal').style.display = 'none';
+        });
+
+        // فلاتر سجل الأدمن
+        document.getElementById('logSearchInput').addEventListener('input', renderAdminLogsTable);
+        document.getElementById('logActionFilter').addEventListener('change', renderAdminLogsTable);
+        document.getElementById('logEmployeeFilter').addEventListener('change', renderAdminLogsTable);
+
+        // تصدير سجل نشاطات الأدمن
+        document.getElementById('btnExportLogs').addEventListener('click', function() {
+          if (activityLogs.length === 0) return alert('لا توجد حركات مسجلة لتصديرها.');
+          const exportData = activityLogs.map(l => ({
+            'التوقيت والتاريخ': l.timestamp || '',
+            'اسم الموظف': l.employee || '',
+            'نوع الحركة': l.action_type || '',
+            'العميل المستهدف': l.client_name || '',
+            'التفاصيل': l.details || ''
+          }));
+          const ws = XLSX.utils.json_to_sheet(exportData);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'سجل_نشاطات_الموظفين');
+          XLSX.writeFile(wb, 'Admin_Audit_History.xlsx');
+        });
+
         // التبويبات
         document.getElementById('tab-all').addEventListener('click', () => setTab('الكل', 'tab-all'));
         document.getElementById('tab-done').addEventListener('click', () => setTab('تم', 'tab-done'));
@@ -811,7 +1075,7 @@
           updateBulkActionBar();
         });
 
-        // Bulk Delete
+        // Bulk Delete مع التوثيق
         document.getElementById('btnBulkDelete').addEventListener('click', async function() {
           const count = selectedIds.size;
           if (count === 0) return;
@@ -823,6 +1087,7 @@
               if (error) {
                 alert('خطأ أثناء الحذف: ' + error.message);
               } else {
+                logActivity('حذف متعدد', 'الأدمن / الموظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
                 selectedIds.clear();
                 updateBulkActionBar();
                 fetchClientsFromCloud();
@@ -874,8 +1139,24 @@
               let res;
               if (id) {
                 res = await supabase.from('clients').update(clientPayload).eq('id', id);
+                if (!res.error) {
+                  logActivity(
+                    'تعديل بيانات',
+                    clientPayload.employee,
+                    clientPayload.name,
+                    `تم تعديل بيانات العميل (المبلغ: ${clientPayload.amount} ج.م، الحالة: ${clientPayload.status})`
+                  );
+                }
               } else {
                 res = await supabase.from('clients').insert([clientPayload]);
+                if (!res.error) {
+                  logActivity(
+                    'إضافة عميل',
+                    clientPayload.employee,
+                    clientPayload.name,
+                    `تمت إضافة عميل جديد بمبلغ ${clientPayload.amount} ج.م وحالة [${clientPayload.status}]`
+                  );
+                }
               }
 
               if (res.error) {
@@ -955,6 +1236,7 @@
                 if (error) {
                   alert('خطأ أثناء الرفع للسحابة: ' + error.message);
                 } else {
+                  logActivity('استيراد شيت', 'الأدمن / النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ملف شيت يحتوي على ${rowsToInsert.length} عميل جديد`);
                   alert(`تم رفع وتزامن ${rowsToInsert.length} عميل في السحابة بنجاح.`);
                   fetchClientsFromCloud();
                 }
