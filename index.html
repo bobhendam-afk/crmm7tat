@@ -214,17 +214,17 @@
 
   </div>
 
-  <!-- Modal: قفل الأدمن برقم سري (PIN Modal) -->
+  <!-- Modal: قفل الأدمن برقم سري (بدون إظهار أي تلميح أو كلمة سر للموظفين) -->
   <div id="adminPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
       <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
         🔒
       </div>
-      <h3 class="text-base font-bold text-gray-800 mb-1">تسجيل دخول الأدمن</h3>
-      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري للوصول إلى سجل حركات الموظفين</p>
+      <h3 class="text-base font-bold text-gray-800 mb-1">منطقة الأدمن المحمية</h3>
+      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري الخاص بالإدارة للمتابعة</p>
       <form id="adminPinForm" class="space-y-3">
-        <input type="password" id="adminPinInput" required placeholder="الرقم السري (الافتراضي: 1234)" 
-               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-sm tracking-widest outline-none focus:border-blue-500">
+        <input type="password" id="adminPinInput" required placeholder="••••••••" autocomplete="off"
+               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-blue-500 font-mono">
         <div class="flex gap-2">
           <button type="button" id="closeAdminPinBtn" class="w-1/2 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
           <button type="submit" class="w-1/2 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer">دخول</button>
@@ -238,7 +238,7 @@
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
       
       <!-- Header -->
-      <div class="flex items-center justify-between pb-4 border-b">
+      <div class="flex flex-wrap items-center justify-between pb-4 border-b gap-3">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
             🛡️
@@ -249,6 +249,10 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <button type="button" id="btnChangeAdminPin" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer border border-gray-200">
+            <span>🔑</span>
+            <span>تغيير كلمة السر</span>
+          </button>
           <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>📥</span>
             <span>تصدير السجل</span>
@@ -437,7 +441,16 @@
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
-      const ADMIN_PIN = '1234'; // الرقم السري الافتراضي للأدمن
+      
+      // الرقم السري للأدمن (يتم حفظه وإمكانية تغييره في أي وقت)
+      function getAdminPin() {
+        return localStorage.getItem('crm_admin_secret_pin') || '1234';
+      }
+
+      function setAdminPin(newPin) {
+        localStorage.setItem('crm_admin_secret_pin', newPin);
+      }
+
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
       function initDateHeader() {
@@ -453,7 +466,6 @@
         return `${dateStr}، ${timeStr}`;
       }
 
-      // دالة تسجيل أي حركة في سجل الأدمن (Audit Logger)
       async function logActivity(actionType, employee, clientName, details) {
         const logEntry = {
           action_type: actionType,
@@ -472,7 +484,6 @@
         }
       }
 
-      // جلب سجل الحركات للأدمن
       async function fetchActivityLogs() {
         if (!supabase) return;
         try {
@@ -1008,17 +1019,33 @@
         document.getElementById('adminPinForm').addEventListener('submit', function(e) {
           e.preventDefault();
           const enteredPin = document.getElementById('adminPinInput').value;
-          if (enteredPin === ADMIN_PIN) {
+          if (enteredPin === getAdminPin()) {
             document.getElementById('adminPinModal').style.display = 'none';
             fetchActivityLogs();
             document.getElementById('adminHistoryModal').style.display = 'flex';
           } else {
-            alert('الرقم السري غير صحيح! يرجى المحاولة مرة أخرى.');
+            alert('الرقم السري غير صحيح!');
           }
         });
 
         document.getElementById('closeAdminHistoryBtn').addEventListener('click', () => {
           document.getElementById('adminHistoryModal').style.display = 'none';
+        });
+
+        // تغيير الرقم السري للأدمن
+        document.getElementById('btnChangeAdminPin').addEventListener('click', function() {
+          const currentPin = prompt('أدخل الرقم السري الحالي:');
+          if (currentPin === getAdminPin()) {
+            const newPin = prompt('أدخل الرقم السري الجديد:');
+            if (newPin && newPin.trim().length >= 4) {
+              setAdminPin(newPin.trim());
+              alert('تم تحديث الرقم السري للأدمن بنجاح 🔒');
+            } else {
+              alert('يجب أن يتكون الرقم السري من 4 أرقام أو أحرف على الأقل.');
+            }
+          } else if (currentPin !== null) {
+            alert('الرقم السري الحالي غير صحيح.');
+          }
         });
 
         // فلاتر سجل الأدمن
@@ -1107,7 +1134,7 @@
         document.getElementById('closeClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
         document.getElementById('cancelClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
 
-        // إرسال نموذج العميل
+        // إرسال نموذج العميل مع توثيق الإضافة أو التعديل
         document.getElementById('clientForm').addEventListener('submit', async function(e) {
           e.preventDefault();
           const submitBtn = document.getElementById('saveClientSubmitBtn');
