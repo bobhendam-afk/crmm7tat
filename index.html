@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro</title>
+  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro (High Performance)</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- XLSX Library -->
@@ -80,7 +80,7 @@
 
         <!-- الحالات الأربعة والتاريخ -->
         <div class="w-full lg:w-72 space-y-2">
-          <div class="text-left text-xs font-bold text-gray-500 mb-3" id="currentDateLabel">أغسطس ٢٠٢٦</div>
+          <div class="text-left text-xs font-bold text-gray-500 mb-3" id="currentDateLabel">-</div>
           
           <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-transparent text-sm">
             <span class="text-gray-700 font-medium">تم التواصل</span>
@@ -130,7 +130,7 @@
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
       <div class="relative">
-        <input type="text" id="searchInput" placeholder="بحث بالاسم أو الرقم أو الموظف أو الملاحظات..." 
+        <input type="text" id="searchInput" placeholder="بحث سريع في الآلاف من السجلات (الاسم، الرقم، الموظف، الملاحظات)..." 
                class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <span class="absolute right-3 top-3 text-gray-400">🔍</span>
       </div>
@@ -182,8 +182,8 @@
       </div>
     </div>
 
-    <!-- 4. جدول البيانات -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <!-- 4. جدول البيانات مع نظام التصفح والصفحات -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-sm">
           <thead class="bg-gray-50 text-gray-600 text-xs font-semibold">
@@ -207,14 +207,37 @@
           </tbody>
         </table>
       </div>
+
       <div id="emptyState" class="text-center py-12 text-gray-400" style="display: none;">
-        لا توجد بيانات حالياً في السحابة. اضغط على "+ إضافة عميل" أو "استيراد بيانات" للبدء.
+        لا توجد بيانات مطابقة حالياً.
       </div>
+
+      <!-- شريط الصفحات والتنقل (Pagination Bar) لسرعة الأداء مع 10,000+ سجل -->
+      <div class="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+        <div class="flex items-center gap-3 text-xs text-gray-600">
+          <span>عرض</span>
+          <select id="pageSizeSelect" class="border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none text-xs font-semibold focus:border-blue-500 cursor-pointer">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+          </select>
+          <span>سجل لكل صفحة</span>
+          <span class="text-gray-300">|</span>
+          <span id="paginationInfo" class="font-medium">عرض 0 - 0 من إجمالي 0</span>
+        </div>
+
+        <div class="flex items-center gap-1 text-xs" id="paginationControls">
+          <!-- أزرار الصفحات تتولد ديناميكياً -->
+        </div>
+      </div>
+
     </div>
 
   </div>
 
-  <!-- Modal: قفل الأدمن برقم سري (بدون إظهار أي تلميح أو كلمة سر للموظفين) -->
+  <!-- Modal: قفل الأدمن برقم سري -->
   <div id="adminPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
       <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
@@ -441,8 +464,13 @@
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
+
+      // متغيرات إدارة الصفحات (Pagination) للتعامل مع 10,000+ سجل
+      let currentPage = 1;
+      let pageSize = 50;
+      let searchDebounceTimer = null;
       
-      // الرقم السري للأدمن (يتم حفظه وإمكانية تغييره في أي وقت)
+      // الرقم السري للأدمن
       function getAdminPin() {
         return localStorage.getItem('crm_admin_secret_pin') || '1234';
       }
@@ -490,7 +518,8 @@
           const { data, error } = await supabase
             .from('activity_logs')
             .select('*')
-            .order('id', { ascending: false });
+            .order('id', { ascending: false })
+            .limit(1000);
 
           if (!error && data) {
             activityLogs = data;
@@ -536,38 +565,62 @@
         return cleaned;
       }
 
+      // ✅ جلب جميع السجلات بالدفعات لتجاوز حد 1,000 الافتراضي لسحب 10,000+ سجل
       async function fetchClientsFromCloud() {
         if (!supabase) return;
+        const statusEl = document.getElementById('syncStatus');
         try {
-          const { data, error } = await supabase
-            .from('clients')
-            .select('*')
-            .order('id', { ascending: false });
-
-          if (error) {
-            console.error("Supabase fetch error:", error);
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-              statusEl.innerText = '🔴 تعذر جلب البيانات من السحابة';
-              statusEl.className = 'text-[11px] bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
-            }
-          } else if (data) {
-            clients = data;
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-              statusEl.innerText = '🟢 متصل سحابياً';
-              statusEl.className = 'text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
-            }
-            const currentIdStrings = new Set(clients.map(c => String(c.id)));
-            selectedIds.forEach(id => {
-              if (!currentIdStrings.has(id)) selectedIds.delete(id);
-            });
-            updateDashboardStats();
-            renderTable();
-            updateBulkActionBar();
+          if (statusEl) {
+            statusEl.innerText = '🔄 جاري المزامنة...';
+            statusEl.className = 'text-[11px] bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
           }
+
+          let allData = [];
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from('clients')
+              .select('*')
+              .order('id', { ascending: false })
+              .range(from, from + batchSize - 1);
+
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+              allData = allData.concat(data);
+              if (data.length < batchSize) {
+                hasMore = false;
+              } else {
+                from += batchSize;
+              }
+            } else {
+              hasMore = false;
+            }
+          }
+
+          clients = allData;
+          if (statusEl) {
+            statusEl.innerText = `🟢 متصل سحابياً (${clients.length.toLocaleString('ar-EG')} عميل)`;
+            statusEl.className = 'text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
+          }
+
+          const currentIdStrings = new Set(clients.map(c => String(c.id)));
+          selectedIds.forEach(id => {
+            if (!currentIdStrings.has(id)) selectedIds.delete(id);
+          });
+
+          updateDashboardStats();
+          renderTable();
+          updateBulkActionBar();
         } catch (err) {
           console.error("Fetch error:", err);
+          if (statusEl) {
+            statusEl.innerText = '🔴 تعذر جلب البيانات من السحابة';
+            statusEl.className = 'text-[11px] bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
+          }
         }
       }
 
@@ -587,22 +640,28 @@
 
         const currentMonthClients = clients.filter(c => (c.date || '').startsWith(currentYearMonth));
         const heroEl = document.getElementById('heroMonthTotal');
-        if (heroEl) heroEl.innerText = currentMonthClients.length;
+        if (heroEl) heroEl.innerText = currentMonthClients.length.toLocaleString('ar-EG');
 
-        const doneCount = clients.filter(c => c.status === 'تم').length;
-        const noAnswerCount = clients.filter(c => c.status === 'لم يرد').length;
-        const pendingCount = clients.filter(c => c.status === 'لم يتم').length;
-        const reminderCount = clients.filter(c => c.status === 'تذكير').length;
+        let doneCount = 0, noAnswerCount = 0, pendingCount = 0, reminderCount = 0, totalRevenue = 0;
+
+        for (let i = 0; i < clients.length; i++) {
+          const c = clients[i];
+          if (c.status === 'تم') doneCount++;
+          else if (c.status === 'لم يرد') noAnswerCount++;
+          else if (c.status === 'لم يتم') pendingCount++;
+          else if (c.status === 'تذكير') reminderCount++;
+          totalRevenue += (parseFloat(c.amount) || 0);
+        }
 
         const pDone = document.getElementById('pillDone');
         const pNo = document.getElementById('pillNoAnswer');
         const pPend = document.getElementById('pillPending');
         const pRem = document.getElementById('pillReminder');
 
-        if (pDone) pDone.innerText = doneCount;
-        if (pNo) pNo.innerText = noAnswerCount;
-        if (pPend) pPend.innerText = pendingCount;
-        if (pRem) pRem.innerText = reminderCount;
+        if (pDone) pDone.innerText = doneCount.toLocaleString('ar-EG');
+        if (pNo) pNo.innerText = noAnswerCount.toLocaleString('ar-EG');
+        if (pPend) pPend.innerText = pendingCount.toLocaleString('ar-EG');
+        if (pRem) pRem.innerText = reminderCount.toLocaleString('ar-EG');
 
         const totalAttempted = doneCount + noAnswerCount + reminderCount;
         let successRate = totalAttempted > 0 ? Math.round((doneCount / totalAttempted) * 100) : 0;
@@ -619,16 +678,15 @@
         const cardP = document.getElementById('cardPending');
         const cardR = document.getElementById('cardRevenue');
 
-        if (cardT) cardT.innerText = clients.length;
-        if (cardD) cardD.innerText = doneCount;
-        if (cardP) cardP.innerText = pendingCount;
-
-        const totalRevenue = clients.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+        if (cardT) cardT.innerText = clients.length.toLocaleString('ar-EG');
+        if (cardD) cardD.innerText = doneCount.toLocaleString('ar-EG');
+        if (cardP) cardP.innerText = pendingCount.toLocaleString('ar-EG');
         if (cardR) cardR.innerText = totalRevenue.toLocaleString('ar-EG');
       }
 
       function setTab(tab, elementId) {
         currentTab = tab;
+        currentPage = 1;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
         const activeBtn = document.getElementById(elementId);
         if (activeBtn) activeBtn.classList.add('active-tab');
@@ -641,7 +699,7 @@
         if (!bar || !badge) return;
 
         if (selectedIds.size > 0) {
-          badge.innerText = selectedIds.size;
+          badge.innerText = selectedIds.size.toLocaleString('ar-EG');
           bar.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
           bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         } else {
@@ -650,6 +708,7 @@
         }
       }
 
+      // ✅ فلترة وتصفح سريع جداً للجدول عبر الصفحات
       function renderTable() {
         const searchInput = document.getElementById('searchInput');
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
@@ -657,28 +716,51 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        let filtered = [...clients];
-        if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
+        let filtered = clients;
+        if (currentTab !== 'الكل') {
+          filtered = filtered.filter(c => c.status === currentTab);
+        }
         if (search) {
           filtered = filtered.filter(c => 
-            (c.name || '').toLowerCase().includes(search) || 
-            String(c.phone || '').includes(search) ||
-            (c.employee || '').toLowerCase().includes(search) ||
-            (c.notes || '').toLowerCase().includes(search)
+            (c.name && c.name.toLowerCase().includes(search)) || 
+            (c.phone && String(c.phone).includes(search)) ||
+            (c.employee && c.employee.toLowerCase().includes(search)) ||
+            (c.notes && c.notes.toLowerCase().includes(search))
           );
         }
 
+        const totalItems = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
         const emptyEl = document.getElementById('emptyState');
         if (emptyEl) {
-          emptyEl.style.display = (filtered.length === 0) ? 'block' : 'none';
+          emptyEl.style.display = (totalItems === 0) ? 'block' : 'none';
         }
+
+        // تحديث معلومات شريط الصفحات
+        const infoEl = document.getElementById('paginationInfo');
+        if (infoEl) {
+          if (totalItems === 0) {
+            infoEl.innerText = 'لا توجد نتائج';
+          } else {
+            infoEl.innerText = `عرض ${(startIndex + 1).toLocaleString('ar-EG')} - ${endIndex.toLocaleString('ar-EG')} من إجمالي ${totalItems.toLocaleString('ar-EG')}`;
+          }
+        }
+
+        renderPaginationControls(totalPages);
 
         const selectAll = document.getElementById('selectAllCheckbox');
         if (selectAll) {
-          selectAll.checked = filtered.length > 0 && filtered.every(c => selectedIds.has(String(c.id)));
+          selectAll.checked = pageItems.length > 0 && pageItems.every(c => selectedIds.has(String(c.id)));
         }
 
-        filtered.forEach((c, idx) => {
+        pageItems.forEach((c, idx) => {
+          const globalIdx = startIndex + idx + 1;
           const tier = calculateTier(c.amount);
           const waPhone = formatWhatsAppPhone(c.phone);
           const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent('مرحباً ' + c.name + '، بخصوص استفسارك معنا...')}`;
@@ -692,10 +774,10 @@
             <td class="p-3.5 text-center" onclick="event.stopPropagation()">
               <input type="checkbox" data-id="${c.id}" class="row-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer" ${isSelected ? 'checked' : ''}>
             </td>
-            <td class="p-3.5 text-gray-400 text-xs">${idx + 1}</td>
-            <td class="p-3.5 font-bold text-gray-900">${c.name}</td>
-            <td class="p-3.5 font-mono text-gray-600 text-xs" dir="ltr">${c.phone}</td>
-            <td class="p-3.5 font-bold text-blue-700">${Number(c.amount).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5 text-gray-400 text-xs">${globalIdx}</td>
+            <td class="p-3.5 font-bold text-gray-900">${c.name || '-'}</td>
+            <td class="p-3.5 font-mono text-gray-600 text-xs" dir="ltr">${c.phone || '-'}</td>
+            <td class="p-3.5 font-bold text-blue-700">${Number(c.amount || 0).toLocaleString('ar-EG')} ج.م</td>
             <td class="p-3.5">${getTierBadge(tier)}</td>
             <td class="p-3.5" onclick="event.stopPropagation()">
               <div>
@@ -736,6 +818,7 @@
           tbody.appendChild(tr);
         });
 
+        // ربط الأحداث لصفحة الحالية
         tbody.querySelectorAll('.row-checkbox').forEach(cb => {
           cb.addEventListener('change', function(e) {
             e.stopPropagation();
@@ -747,7 +830,6 @@
           });
         });
 
-        // تحديث الحالة مع تسجيل الحركة في سجل الأدمن
         tbody.querySelectorAll('.status-select').forEach(sel => {
           sel.addEventListener('change', async function() {
             const id = this.getAttribute('data-id');
@@ -809,6 +891,65 @@
         });
       }
 
+      // رسم أزرار الصفحات الذكية
+      function renderPaginationControls(totalPages) {
+        const container = document.getElementById('paginationControls');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // زر الصفحة السابقة
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.innerText = 'السابق';
+        prevBtn.disabled = (currentPage === 1);
+        prevBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
+        prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+        container.appendChild(prevBtn);
+
+        // إنشاء أرقام الصفحات مع اختصار (...)
+        const pages = [];
+        if (totalPages <= 7) {
+          for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          if (currentPage > 3) pages.push('...');
+          const start = Math.max(2, currentPage - 1);
+          const end = Math.min(totalPages - 1, currentPage + 1);
+          for (let i = start; i <= end; i++) {
+            if (!pages.includes(i)) pages.push(i);
+          }
+          if (currentPage < totalPages - 2) pages.push('...');
+          pages.push(totalPages);
+        }
+
+        pages.forEach(p => {
+          if (p === '...') {
+            const dots = document.createElement('span');
+            dots.innerText = '...';
+            dots.className = 'px-2 py-1 text-gray-400 font-bold';
+            container.appendChild(dots);
+          } else {
+            const pageBtn = document.createElement('button');
+            pageBtn.type = 'button';
+            pageBtn.innerText = p;
+            pageBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-bold transition cursor-pointer ${p === currentPage ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`;
+            pageBtn.onclick = () => { currentPage = p; renderTable(); };
+            container.appendChild(pageBtn);
+          }
+        });
+
+        // زر الصفحة التالية
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.innerText = 'التالي';
+        nextBtn.disabled = (currentPage === totalPages);
+        nextBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === totalPages ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
+        nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
+        container.appendChild(nextBtn);
+      }
+
       function toggleRowSelection(id) {
         if (selectedIds.has(id)) selectedIds.delete(id);
         else selectedIds.add(id);
@@ -828,11 +969,11 @@
       function openEditModal(client) {
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editContactedAt').value = client.contacted_at || '';
-        document.getElementById('clientName').value = client.name;
-        document.getElementById('clientPhone').value = client.phone;
-        document.getElementById('clientAmount').value = client.amount;
-        document.getElementById('clientStatus').value = client.status;
-        document.getElementById('clientEmployee').value = client.employee;
+        document.getElementById('clientName').value = client.name || '';
+        document.getElementById('clientPhone').value = client.phone || '';
+        document.getElementById('clientAmount').value = client.amount || 0;
+        document.getElementById('clientStatus').value = client.status || 'لم يتم';
+        document.getElementById('clientEmployee').value = client.employee || '';
         document.getElementById('clientNotes').value = client.notes || '';
         document.getElementById('modalTitle').innerText = 'تعديل بيانات العميل';
         document.getElementById('clientModal').style.display = 'flex';
@@ -916,10 +1057,10 @@
         sortedMonths.forEach(ym => {
           const parts = ym.split('-');
           const y = parts[0];
-          const m = parseInt(parts) - 1;
+          const m = parseInt(parts[1], 10) - 1;
           const opt = document.createElement('option');
           opt.value = ym;
-          opt.innerText = `${arabicMonths[m]} ${y}`;
+          opt.innerText = `${arabicMonths[m] || ''} ${y}`;
           selectPicker.appendChild(opt);
         });
 
@@ -946,15 +1087,15 @@
         summaryCards.innerHTML = `
           <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
             <span class="text-[10px] text-gray-500 font-semibold">عملاء الشهر</span>
-            <div class="text-xl font-bold text-gray-800 mt-0.5">${total}</div>
+            <div class="text-xl font-bold text-gray-800 mt-0.5">${total.toLocaleString('ar-EG')}</div>
           </div>
           <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
             <span class="text-[10px] text-emerald-700 font-semibold">تم التواصل</span>
-            <div class="text-xl font-bold text-emerald-600 mt-0.5">${done}</div>
+            <div class="text-xl font-bold text-emerald-600 mt-0.5">${done.toLocaleString('ar-EG')}</div>
           </div>
           <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center">
             <span class="text-[10px] text-amber-700 font-semibold">في الانتظار / لم يرد</span>
-            <div class="text-xl font-bold text-amber-600 mt-0.5">${pending + noAns}</div>
+            <div class="text-xl font-bold text-amber-600 mt-0.5">${(pending + noAns).toLocaleString('ar-EG')}</div>
           </div>
           <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
             <span class="text-[10px] text-blue-700 font-semibold">إجمالي المحصل</span>
@@ -988,10 +1129,10 @@
             tr.className = 'border-b border-gray-100 hover:bg-gray-50';
             tr.innerHTML = `
               <td class="p-2.5 font-bold text-gray-800">${emp}</td>
-              <td class="p-2.5 font-semibold text-gray-700">${d.total}</td>
-              <td class="p-2.5 text-emerald-600 font-bold">${d.done}</td>
-              <td class="p-2.5 text-red-500 font-bold">${d.noAnswer}</td>
-              <td class="p-2.5 text-amber-500 font-bold">${d.pending}</td>
+              <td class="p-2.5 font-semibold text-gray-700">${d.total.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
               <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
               <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
             `;
@@ -1004,6 +1145,13 @@
         initDateHeader();
         fetchClientsFromCloud();
         setupRealtimeListener();
+
+        // اختيار عدد العناصر لكل صفحة
+        document.getElementById('pageSizeSelect').addEventListener('change', function() {
+          pageSize = parseInt(this.value, 10) || 50;
+          currentPage = 1;
+          renderTable();
+        });
 
         // فتح سجل الأدمن
         document.getElementById('btnAdminHistory').addEventListener('click', function() {
@@ -1076,33 +1224,44 @@
         document.getElementById('tab-noanswer').addEventListener('click', () => setTab('لم يرد', 'tab-noanswer'));
         document.getElementById('tab-reminder').addEventListener('click', () => setTab('تذكير', 'tab-reminder'));
 
-        document.getElementById('searchInput').addEventListener('input', renderTable);
+        // بحث متجاوب مع Debounce لسرعة فائقة
+        document.getElementById('searchInput').addEventListener('input', function() {
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(() => {
+            currentPage = 1;
+            renderTable();
+          }, 200);
+        });
 
-        // Select All Checkbox
+        // Select All Checkbox (للصفحة الحالية)
         document.getElementById('selectAllCheckbox').addEventListener('change', function() {
           const searchInput = document.getElementById('searchInput');
           const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
-          let filtered = [...clients];
+          let filtered = clients;
           if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
           if (search) {
             filtered = filtered.filter(c => 
-              (c.name || '').toLowerCase().includes(search) || 
-              String(c.phone || '').includes(search) ||
-              (c.employee || '').toLowerCase().includes(search) ||
-              (c.notes || '').toLowerCase().includes(search)
+              (c.name && c.name.toLowerCase().includes(search)) || 
+              (c.phone && String(c.phone).includes(search)) ||
+              (c.employee && c.employee.toLowerCase().includes(search)) ||
+              (c.notes && c.notes.toLowerCase().includes(search))
             );
           }
 
+          const startIndex = (currentPage - 1) * pageSize;
+          const endIndex = Math.min(startIndex + pageSize, filtered.length);
+          const pageItems = filtered.slice(startIndex, endIndex);
+
           if (this.checked) {
-            filtered.forEach(c => selectedIds.add(String(c.id)));
+            pageItems.forEach(c => selectedIds.add(String(c.id)));
           } else {
-            filtered.forEach(c => selectedIds.delete(String(c.id)));
+            pageItems.forEach(c => selectedIds.delete(String(c.id)));
           }
           renderTable();
           updateBulkActionBar();
         });
 
-        // Bulk Delete مع التوثيق
+        // ✅ Bulk Delete بالدفعات لتجنب حدود URL
         document.getElementById('btnBulkDelete').addEventListener('click', async function() {
           const count = selectedIds.size;
           if (count === 0) return;
@@ -1110,10 +1269,20 @@
           if (confirm(`هل أنت متأكد من حذف ${count} عميل محدد من السحابة نهائياً؟`)) {
             if (supabase) {
               const idsArray = Array.from(selectedIds);
-              const { error } = await supabase.from('clients').delete().in('id', idsArray);
-              if (error) {
-                alert('خطأ أثناء الحذف: ' + error.message);
-              } else {
+              const chunkSize = 200;
+              let hasError = false;
+
+              for (let i = 0; i < idsArray.length; i += chunkSize) {
+                const chunk = idsArray.slice(i, i + chunkSize);
+                const { error } = await supabase.from('clients').delete().in('id', chunk);
+                if (error) {
+                  hasError = true;
+                  alert('خطأ أثناء الحذف: ' + error.message);
+                  break;
+                }
+              }
+
+              if (!hasError) {
                 logActivity('حذف متعدد', 'الأدمن / الموظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
                 selectedIds.clear();
                 updateBulkActionBar();
@@ -1134,7 +1303,7 @@
         document.getElementById('closeClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
         document.getElementById('cancelClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
 
-        // إرسال نموذج العميل مع توثيق الإضافة أو التعديل
+        // إرسال نموذج العميل
         document.getElementById('clientForm').addEventListener('submit', async function(e) {
           e.preventDefault();
           const submitBtn = document.getElementById('saveClientSubmitBtn');
@@ -1208,6 +1377,7 @@
           document.getElementById('fileInput').click();
         });
 
+        // ✅ رفع الملفات الكبيرة (10,000+ صف) على دفعات تلقائياً
         document.getElementById('fileInput').addEventListener('change', function(e) {
           const file = e.target.files[0];
           if (!file || !supabase) return;
@@ -1259,17 +1429,27 @@
               });
 
               if (rowsToInsert.length > 0) {
-                const { error } = await supabase.from('clients').insert(rowsToInsert);
-                if (error) {
-                  alert('خطأ أثناء الرفع للسحابة: ' + error.message);
-                } else {
-                  logActivity('استيراد شيت', 'الأدمن / النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ملف شيت يحتوي على ${rowsToInsert.length} عميل جديد`);
-                  alert(`تم رفع وتزامن ${rowsToInsert.length} عميل في السحابة بنجاح.`);
-                  fetchClientsFromCloud();
+                const statusEl = document.getElementById('syncStatus');
+                const CHUNK_SIZE = 500;
+                const totalChunks = Math.ceil(rowsToInsert.length / CHUNK_SIZE);
+
+                for (let i = 0; i < totalChunks; i++) {
+                  const chunk = rowsToInsert.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                  if (statusEl) {
+                    statusEl.innerText = `⏳ جاري رفع الدفعة ${i + 1} من ${totalChunks}...`;
+                  }
+                  const { error } = await supabase.from('clients').insert(chunk);
+                  if (error) {
+                    throw new Error(`خطأ في الدفعة ${i + 1}: ` + error.message);
+                  }
                 }
+
+                logActivity('استيراد شيت', 'الأدمن / النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ملف شيت يحتوي على ${rowsToInsert.length} عميل جديد`);
+                alert(`تم رفع وتزامن ${rowsToInsert.length.toLocaleString('ar-EG')} عميل في السحابة بنجاح.`);
+                fetchClientsFromCloud();
               }
             } catch (err) {
-              alert('خطأ أثناء قراءة الملف: ' + err.message);
+              alert('خطأ أثناء معالجة الملف: ' + err.message);
             } finally {
               e.target.value = '';
             }
@@ -1281,13 +1461,13 @@
         document.getElementById('btnExport').addEventListener('click', function() {
           if (clients.length === 0) return alert('لا توجد بيانات لتصديرها.');
           const exportData = clients.map(c => ({
-            'اسم العميل': c.name,
-            'رقم الهاتف': c.phone,
-            'المبلغ المدفوع': c.amount,
+            'اسم العميل': c.name || '',
+            'رقم الهاتف': c.phone || '',
+            'المبلغ المدفوع': c.amount || 0,
             'الفئة': calculateTier(c.amount),
-            'حالة التواصل': c.status,
+            'حالة التواصل': c.status || 'لم يتم',
             'تاريخ ووقت التواصل': c.contacted_at || '',
-            'الموظف المسؤول': c.employee,
+            'الموظف المسؤول': c.employee || '',
             'تاريخ الإضافة': c.date || '',
             'الملاحظات': c.notes || ''
           }));
@@ -1324,11 +1504,11 @@
               tr.className = 'border-b border-gray-100 hover:bg-gray-50';
               tr.innerHTML = `
                 <td class="p-2.5 font-bold text-gray-800">${emp}</td>
-                <td class="p-2.5">${d.total}</td>
-                <td class="p-2.5 text-emerald-600 font-bold">${d.done}</td>
-                <td class="p-2.5 text-red-500 font-bold">${d.noAnswer}</td>
-                <td class="p-2.5 text-amber-500 font-bold">${d.pending}</td>
-                <td class="p-2.5 font-bold text-blue-500">${d.reminder}</td>
+                <td class="p-2.5">${d.total.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 font-bold text-blue-500">${d.reminder.toLocaleString('ar-EG')}</td>
                 <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
                 <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
               `;
