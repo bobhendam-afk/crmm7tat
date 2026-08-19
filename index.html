@@ -53,24 +53,24 @@
 
   <div class="max-w-7xl mx-auto space-y-5">
 
-    <!-- شريط التبديل بين الأقسام الرئيسية (القسم العام / قسم السيدات المحمي) -->
+    <!-- شريط التبديل بين القسم الرجالي وقسم السيدات -->
     <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-2.5 rounded-2xl border border-gray-100 shadow-sm">
       <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
-        <button type="button" id="sectionGeneralBtn" class="section-btn section-active px-4 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer">
-          <span>🏢</span>
-          <span>القسم العام (الرجال والكل)</span>
+        <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2.5 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
+          <span>👨</span>
+          <span>القسم الرجالي</span>
         </button>
-        <button type="button" id="sectionWomenBtn" class="section-btn px-4 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
+        <button type="button" id="sectionWomenBtn" class="section-btn px-5 py-2.5 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
           <span>🧕</span>
           <span>قسم السيدات (محمي 🔒)</span>
         </button>
       </div>
 
-      <!-- مؤشر حالة قسم السيدات -->
+      <!-- مؤشر حالة قسم السيدات عند فتحه -->
       <div id="womenSectionIndicator" class="flex items-center gap-2 bg-pink-50 text-pink-700 border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold" style="display: none;">
-        <span>🔐 أنتِ الآن في قسم السيدات المحمي</span>
+        <span>🔐 أنتِ الآن في قسم السيدات (بيانات النساء فقط)</span>
         <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer">
-          قفل القسم والعودة للعام
+          قفل القسم والعودة للرجالي
         </button>
         <button type="button" id="btnChangeWomenPin" class="text-pink-700 hover:underline text-[11px] font-semibold cursor-pointer">
           تغيير الـ PIN
@@ -85,13 +85,13 @@
         <!-- إجمالي عملاء الشهر -->
         <div class="text-right w-full lg:w-auto">
           <div class="flex items-center gap-2 text-gray-800 font-bold text-lg md:text-xl">
-            <span class="text-xl" id="heroIcon">📊</span>
-            <h2 id="heroTitle">إحصائيات الشهر الحالي</h2>
+            <span class="text-xl" id="heroIcon">👨</span>
+            <h2 id="heroTitle">إحصائيات الشهر الحالي (القسم الرجالي)</h2>
             <span id="syncStatus" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2">🟢 متصل سحابياً</span>
           </div>
           <div class="mt-4">
             <div class="text-4xl md:text-5xl font-extrabold text-blue-600" id="heroMonthTotal">0</div>
-            <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء هذا الشهر</div>
+            <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي عملاء هذا الشهر</div>
           </div>
         </div>
 
@@ -141,7 +141,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
         <div class="text-3xl md:text-4xl font-extrabold text-gray-800" id="cardTotal">0</div>
-        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء بالقسم</div>
       </div>
       <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
         <div class="text-3xl md:text-4xl font-extrabold text-emerald-500" id="cardDone">0</div>
@@ -161,7 +161,7 @@
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
       <div class="relative">
-        <input type="text" id="searchInput" placeholder="بحث سريع في كل البيانات (الاسم، الرقم، الموظف، الملاحظات)..." 
+        <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
                class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <span class="absolute right-3 top-3 text-gray-400">🔍</span>
       </div>
@@ -197,7 +197,7 @@
 
           <button type="button" id="btnExport" class="bg-[#0f766e] hover:bg-[#115e59] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
             <span>⬇️</span>
-            <span>تنزيل كل البيانات</span>
+            <span>تنزيل بيانات القسم</span>
           </button>
 
           <button type="button" id="btnMonthlyReport" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
@@ -406,9 +406,9 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">تصنيف القسم</label>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">القسم المستهدف</label>
           <select id="clientCategory" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
-            <option value="general">القسم العام (رجال وعام)</option>
+            <option value="men">القسم الرجالي 👨</option>
             <option value="women">قسم السيدات 🧕 (محمي)</option>
           </select>
         </div>
@@ -453,7 +453,7 @@
   <div id="employeeModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 relative">
       <div class="flex items-center justify-between mb-4 border-b pb-3">
-        <h3 class="text-base font-bold text-gray-800">👥 تقرير أداء وتوزيع الموظفين الإجمالي</h3>
+        <h3 class="text-base font-bold text-gray-800" id="employeeModalTitle">👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي)</h3>
         <button type="button" id="closeEmployeeModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
       </div>
       <div class="overflow-x-auto">
@@ -461,7 +461,7 @@
           <thead class="bg-gray-50 text-gray-600 font-semibold">
             <tr>
               <th class="p-2.5">الموظف</th>
-              <th class="p-2.5">إجمالي العملاء</th>
+              <th class="p-2.5">عملاء هذا القسم</th>
               <th class="p-2.5">تم</th>
               <th class="p-2.5">لم يرد</th>
               <th class="p-2.5">في الانتظار</th>
@@ -482,7 +482,7 @@
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 relative">
       <div class="flex items-center justify-between mb-4 border-b pb-3">
         <div class="flex items-center gap-3">
-          <h3 class="text-base font-bold text-gray-800">📊 التقرير الشهري التفصيلي</h3>
+          <h3 class="text-base font-bold text-gray-800" id="monthlyModalTitle">📊 التقرير الشهري التفصيلي</h3>
           <select id="monthlySelectPicker" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 bg-white font-semibold outline-none focus:border-blue-500 cursor-pointer">
           </select>
         </div>
@@ -492,7 +492,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="monthlySummaryCards">
       </div>
 
-      <h4 class="text-xs font-bold text-gray-700 mb-2">أداء الموظفين خلال هذا الشهر:</h4>
+      <h4 class="text-xs font-bold text-gray-700 mb-2">أداء الموظفين في هذا القسم خلال الشهر:</h4>
       <div class="overflow-x-auto border border-gray-100 rounded-xl">
         <table class="w-full text-right text-xs">
           <thead class="bg-gray-50 text-gray-600 font-semibold">
@@ -529,7 +529,7 @@
         }
       }
 
-      // قائمة الموظفين للتوزيع التلقائي
+      // قائمة الموظفين للتوزيع التلقائي العادل
       const DEFAULT_EMPLOYEES = [
         "عبدالرحمن أبو شامة",
         "إبراهيم البغدادي",
@@ -540,7 +540,7 @@
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
-      let currentSection = 'general'; // 'general' | 'women'
+      let currentSection = 'men'; // 'men' | 'women'
       let isWomenSectionUnlocked = false;
 
       // متغيرات إدارة الصفحات
@@ -578,7 +578,7 @@
         return `${dateStr}، ${timeStr}`;
       }
 
-      // دالة تصحيح وتهيئة أرقام الهواتف وجعلها أرقام كاملة (11 رقم)
+      // دالة تصحيح وتهيئة أرقام الهواتف وجعلها 11 رقماً تبدأ بـ 01
       function normalizePhoneNumber(rawPhone) {
         if (!rawPhone && rawPhone !== 0) return '';
         let str = String(rawPhone).trim();
@@ -600,12 +600,13 @@
         return digits || str;
       }
 
-      // اختيار الموظف التلقائي العادل (Load Balancing)
+      // اختيار الموظف التلقائي العادل (Load Balancing على عملاء القسم الحالي)
       function getAutoAssignedEmployee() {
+        const activeList = getActiveSectionClients();
         const counts = {};
         DEFAULT_EMPLOYEES.forEach(emp => counts[emp] = 0);
 
-        clients.forEach(c => {
+        activeList.forEach(c => {
           if (counts[c.employee] !== undefined) {
             counts[c.employee]++;
           }
@@ -679,9 +680,9 @@
 
       function getSectionBadge(category) {
         if (category === 'women') {
-          return '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🧕 سيدات</span>';
+          return '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🧕 نسائي</span>';
         }
-        return '<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🏢 عام</span>';
+        return '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">👨 رجالي</span>';
       }
 
       function getActionBadge(type) {
@@ -787,11 +788,13 @@
         }
       }
 
+      // ✅ فلترة صارمة: القسم الرجالي يعرض فقط الرجال، وقسم السيدات يعرض فقط النساء
       function getActiveSectionClients() {
         if (currentSection === 'women') {
           return clients.filter(c => c.category === 'women');
         }
-        return clients.filter(c => c.category !== 'women');
+        // في القسم الرجالي: يظهر فقط من هو men أو السجلات العامة السابقة التي ليست women
+        return clients.filter(c => c.category === 'men' || (!c.category && c.category !== 'women') || c.category === 'general');
       }
 
       function updateDashboardStats() {
@@ -906,7 +909,7 @@
         const infoEl = document.getElementById('paginationInfo');
         if (infoEl) {
           if (totalItems === 0) {
-            infoEl.innerText = 'لا توجد نتائج';
+            infoEl.innerText = 'لا توجد نتائج في هذا القسم';
           } else {
             infoEl.innerText = `عرض ${(startIndex + 1).toLocaleString('ar-EG')} - ${endIndex.toLocaleString('ar-EG')} من إجمالي ${totalItems.toLocaleString('ar-EG')}`;
           }
@@ -1120,12 +1123,13 @@
         document.getElementById('editContactedAt').value = '';
         document.getElementById('clientNotes').value = '';
         
-        document.getElementById('clientCategory').value = currentSection === 'women' ? 'women' : 'general';
+        // ضبط القسم تلقائياً بحسب القسم المفتوح حالياً
+        document.getElementById('clientCategory').value = currentSection;
         document.getElementById('clientEmployeeSelect').value = 'auto';
         document.getElementById('clientEmployeeCustom').style.display = 'none';
         document.getElementById('clientEmployeeCustom').value = '';
 
-        document.getElementById('modalTitle').innerText = currentSection === 'women' ? 'إضافة عميلة جديدة (قسم السيدات 🧕)' : 'إضافة عميل جديد للسحابة';
+        document.getElementById('modalTitle').innerText = currentSection === 'women' ? 'إضافة عميلة جديدة (قسم السيدات 🧕)' : 'إضافة عميل جديد (القسم الرجالي 👨)';
         document.getElementById('clientModal').style.display = 'flex';
       }
 
@@ -1136,7 +1140,7 @@
         document.getElementById('clientPhone').value = normalizePhoneNumber(client.phone || '');
         document.getElementById('clientAmount').value = client.amount || 0;
         document.getElementById('clientStatus').value = client.status || 'لم يتم';
-        document.getElementById('clientCategory').value = client.category || 'general';
+        document.getElementById('clientCategory').value = client.category === 'women' ? 'women' : 'men';
         document.getElementById('clientNotes').value = client.notes || '';
 
         const empSel = document.getElementById('clientEmployeeSelect');
@@ -1247,6 +1251,11 @@
           selectPicker.appendChild(opt);
         });
 
+        const titleEl = document.getElementById('monthlyModalTitle');
+        if (titleEl) {
+          titleEl.innerText = currentSection === 'women' ? '📊 التقرير الشهري (قسم السيدات 🧕)' : '📊 التقرير الشهري (القسم الرجالي 👨)';
+        }
+
         selectPicker.value = currentYM;
         renderMonthDetails(currentYM);
 
@@ -1330,7 +1339,7 @@
         selectedIds.clear();
         currentPage = 1;
 
-        const genBtn = document.getElementById('sectionGeneralBtn');
+        const menBtn = document.getElementById('sectionMenBtn');
         const womBtn = document.getElementById('sectionWomenBtn');
         const indicator = document.getElementById('womenSectionIndicator');
         const heroStats = document.getElementById('heroStatsContainer');
@@ -1338,7 +1347,7 @@
         const heroIcon = document.getElementById('heroIcon');
 
         if (section === 'women') {
-          genBtn.classList.remove('section-active');
+          menBtn.classList.remove('section-active');
           womBtn.classList.add('section-active');
           indicator.style.display = 'flex';
           heroStats.className = 'bg-[#fdf2f8] border border-[#fbcfe8] rounded-2xl p-6 shadow-sm';
@@ -1346,11 +1355,11 @@
           heroIcon.innerText = '🧕';
         } else {
           womBtn.classList.remove('section-active');
-          genBtn.classList.add('section-active');
+          menBtn.classList.add('section-active');
           indicator.style.display = 'none';
           heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
-          heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم العام)';
-          heroIcon.innerText = '📊';
+          heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي)';
+          heroIcon.innerText = '👨';
         }
 
         updateDashboardStats();
@@ -1370,8 +1379,8 @@
           });
         }
 
-        document.getElementById('sectionGeneralBtn').addEventListener('click', () => {
-          switchSection('general');
+        document.getElementById('sectionMenBtn').addEventListener('click', () => {
+          switchSection('men');
         });
 
         document.getElementById('sectionWomenBtn').addEventListener('click', () => {
@@ -1402,7 +1411,7 @@
 
         document.getElementById('btnLockWomenSection').addEventListener('click', () => {
           isWomenSectionUnlocked = false;
-          switchSection('general');
+          switchSection('men');
         });
 
         document.getElementById('btnChangeWomenPin').addEventListener('click', () => {
@@ -1586,7 +1595,7 @@
 
           const id = document.getElementById('editClientId').value;
           const statusVal = document.getElementById('clientStatus').value;
-          const categoryVal = document.getElementById('clientCategory').value || 'general';
+          const categoryVal = document.getElementById('clientCategory').value || 'men';
           let contactedAtVal = document.getElementById('editContactedAt').value;
           const todayStr = new Date().toISOString().split('T')[0];
 
@@ -1645,7 +1654,7 @@
                   id ? 'تعديل بيانات' : 'إضافة عميل',
                   clientPayload.employee,
                   clientPayload.name,
-                  `تم ${id ? 'تعديل' : 'إضافة'} بيانات العميل - الهاتف: [${clientPayload.phone}]`
+                  `تم ${id ? 'تعديل' : 'إضافة'} بيانات العميل (${clientPayload.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي'}) - الهاتف: [${clientPayload.phone}]`
                 );
                 closeModal('clientModal');
                 fetchClientsFromCloud();
@@ -1659,7 +1668,7 @@
           submitBtn.innerText = 'حفظ في السحابة';
         });
 
-        // استيراد شيت
+        // استيراد شيت مع تصنيف القسم التلقائي
         document.getElementById('btnImport').addEventListener('click', () => {
           document.getElementById('fileInput').click();
         });
@@ -1706,10 +1715,13 @@
                   autoCounter++;
                 }
 
+                // تصنيف دقيق للقسم (رجالي / نسائي)
                 const categoryRaw = String(row['القسم'] || row['التصنيف'] || row['النوع'] || row['الجنس'] || '').toLowerCase();
-                let category = (currentSection === 'women') ? 'women' : 'general';
-                if (categoryRaw.includes('سيدات') || categoryRaw.includes('أنثى') || categoryRaw.includes('نساء') || categoryRaw.includes('women') || categoryRaw.includes('female')) {
+                let category = (currentSection === 'women') ? 'women' : 'men';
+                if (categoryRaw.includes('سيدات') || categoryRaw.includes('أنثى') || categoryRaw.includes('نساء') || categoryRaw.includes('بنات') || categoryRaw.includes('women') || categoryRaw.includes('female')) {
                   category = 'women';
+                } else if (categoryRaw.includes('رجال') || categoryRaw.includes('ذكر') || categoryRaw.includes('شباب') || categoryRaw.includes('men') || categoryRaw.includes('male')) {
+                  category = 'men';
                 }
 
                 const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
@@ -1756,8 +1768,8 @@
                   }
                 }
 
-                logActivity('استيراد شيت', 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ${rowsToInsert.length} عميل وتوزيعهم بنجاح`);
-                alert(`تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل بنجاح.`);
+                logActivity('استيراد شيت', 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد وتصنيف ${rowsToInsert.length} عميل وتوزيعهم بنجاح`);
+                alert(`تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل وتوزيعهم بالقسم بنجاح.`);
                 fetchClientsFromCloud();
               }
             } catch (err) {
@@ -1769,16 +1781,16 @@
           reader.readAsArrayBuffer(file);
         });
 
-        // تصدير إكسل
+        // تصدير إكسل مخصص للقسم النشط فقط
         document.getElementById('btnExport').addEventListener('click', function() {
           const activeClients = getActiveSectionClients();
-          if (activeClients.length === 0) return alert('لا توجد بيانات لتصديرها.');
+          if (activeClients.length === 0) return alert('لا توجد بيانات لتصديرها في هذا القسم.');
           const exportData = activeClients.map(c => ({
             'اسم العميل': c.name || '',
             'رقم الهاتف': normalizePhoneNumber(c.phone || ''),
             'المبلغ المدفوع': c.amount || 0,
             'الفئة': calculateTier(c.amount),
-            'القسم': c.category === 'women' ? 'قسم السيدات' : 'القسم العام',
+            'القسم': c.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي',
             'حالة التواصل': c.status || 'لم يتم',
             'تاريخ ووقت التواصل': c.contacted_at || '',
             'الموظف المسؤول': c.employee || '',
@@ -1787,11 +1799,12 @@
           }));
           const ws = XLSX.utils.json_to_sheet(exportData);
           const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, currentSection === 'women' ? 'عميلات_السيدات' : 'العملاء');
-          XLSX.writeFile(wb, currentSection === 'women' ? 'Women_Clients_CRM.xlsx' : 'CRM_Cloud_Clients.xlsx');
+          const sheetName = currentSection === 'women' ? 'عميلات_السيدات' : 'العملاء_الرجال';
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          XLSX.writeFile(wb, `${sheetName}_CRM.xlsx`);
         });
 
-        // إحصائيات الموظفين
+        // إحصائيات الموظفين مخصصة للقسم الحالي
         document.getElementById('btnEmployeeStats').addEventListener('click', function() {
           const activeClients = getActiveSectionClients();
           const empMap = {};
@@ -1810,6 +1823,11 @@
             else if (c.status === 'تذكير') empMap[emp].reminder++;
             empMap[emp].revenue += (parseFloat(c.amount) || 0);
           });
+
+          const modalTitle = document.getElementById('employeeModalTitle');
+          if (modalTitle) {
+            modalTitle.innerText = currentSection === 'women' ? '👥 تقرير أداء وتوزيع الموظفين (قسم السيدات 🧕)' : '👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي 👨)';
+          }
 
           const tbody = document.getElementById('employeeTableBody');
           tbody.innerHTML = '';
