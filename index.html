@@ -30,49 +30,122 @@
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen pb-24">
+<body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen">
 
-  <!-- عنصر رفع الملفات -->
-  <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+  <!-- ================= 1. شاشة تسجيل الدخول الرئيسية ================= -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-gray-100">
+      
+      <!-- شعار وعنوان الدخول -->
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl mb-3 shadow-lg shadow-blue-500/30 font-bold">
+          ⚡
+        </div>
+        <h2 class="text-xl font-extrabold text-gray-900">نظام إدارة وتواصل العملاء</h2>
+        <p class="text-xs text-gray-500 mt-1 font-semibold">Cloud CRM Pro | تسجيل الدخول للنظام</p>
+      </div>
 
-  <!-- شريط الإجراءات الجماعية العائم (Bulk Actions Bar) -->
-  <div id="bulkActionsBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-4 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none">
-    <span class="text-sm font-semibold flex items-center gap-2">
-      <span class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-bold" id="selectedCountBadge">0</span>
-      <span>عملاء محددين</span>
-    </span>
-    <div class="h-4 w-[1px] bg-gray-700"></div>
-    <button type="button" id="btnBulkDelete" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer">
-      <span>🗑️</span>
-      <span>حذف المحددين</span>
-    </button>
-    <button type="button" id="btnBulkCancel" class="text-gray-400 hover:text-white text-xs font-semibold px-2 py-1 transition cursor-pointer">
-      إلغاء التحديد
-    </button>
+      <!-- تنبيه خطأ تسجيل الدخول -->
+      <div id="loginErrorAlert" class="bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl mb-4 text-center" style="display: none;">
+      </div>
+
+      <!-- نموذج تسجيل الدخول -->
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1.5">اسم المستخدم</label>
+          <div class="relative">
+            <input type="text" id="loginUsername" required placeholder="مثال: admin أو men أو women" autocomplete="username"
+                   class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium">
+            <span class="absolute left-3 top-3.5 text-gray-400 text-sm">👤</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1.5">كلمة المرور</label>
+          <div class="relative">
+            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password"
+                   class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono tracking-wider">
+            <span class="absolute left-3 top-3.5 text-gray-400 text-sm">🔒</span>
+          </div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition cursor-pointer mt-2">
+          تسجيل الدخول للمنظومة 🚀
+        </button>
+      </form>
+
+      <!-- دليل الحسابات الافتراضية للمساعدة -->
+      <div class="mt-6 pt-4 border-t border-gray-100 text-[11px] text-gray-500 space-y-1.5 bg-gray-50 p-3 rounded-xl">
+        <div class="font-bold text-gray-700 mb-1 text-center">🔑 الحسابات الافتراضية للنظام:</div>
+        <div class="flex justify-between items-center">
+          <span class="font-semibold text-gray-700">👑 المدير (كامل الصلاحيات):</span>
+          <span class="font-mono bg-white px-2 py-0.5 rounded border">admin / 123</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="font-semibold text-blue-700">👨 موظف الرجال:</span>
+          <span class="font-mono bg-white px-2 py-0.5 rounded border">men / 111</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="font-semibold text-pink-700">🧕 مسؤولة السيدات:</span>
+          <span class="font-mono bg-white px-2 py-0.5 rounded border">women / 222</span>
+        </div>
+      </div>
+
+    </div>
   </div>
 
-  <div class="max-w-7xl mx-auto space-y-5">
+  <!-- ================= 2. واجهة النظام الرئيسية ================= -->
+  <div id="mainApp" class="max-w-7xl mx-auto space-y-5" style="display: none;">
 
-    <!-- شريط التبديل بين القسم الرجالي وقسم السيدات -->
-    <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-2.5 rounded-2xl border border-gray-100 shadow-sm">
-      <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
-        <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2.5 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
+    <!-- عنصر رفع الملفات -->
+    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+
+    <!-- شريط الإجراءات الجماعية العائم (Bulk Actions Bar) -->
+    <div id="bulkActionsBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-4 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none">
+      <span class="text-sm font-semibold flex items-center gap-2">
+        <span class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-bold" id="selectedCountBadge">0</span>
+        <span>عملاء محددين</span>
+      </span>
+      <div class="h-4 w-[1px] bg-gray-700"></div>
+      <button type="button" id="btnBulkDelete" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer">
+        <span>🗑️</span>
+        <span>حذف المحددين</span>
+      </button>
+      <button type="button" id="btnBulkCancel" class="text-gray-400 hover:text-white text-xs font-semibold px-2 py-1 transition cursor-pointer">
+        إلغاء التحديد
+      </button>
+    </div>
+
+    <!-- شريط معلومات المستخدم والتبديل بين الأقسام وتسجيل الخروج -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+      
+      <!-- أزرار الأقسام (تظهر للأدمن فقط للتبديل، أو تظهر كعنوان ثابت للموظف) -->
+      <div id="sectionSwitcherContainer" class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+        <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
           <span>👨</span>
           <span>القسم الرجالي</span>
         </button>
-        <button type="button" id="sectionWomenBtn" class="section-btn px-5 py-2.5 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
+        <button type="button" id="sectionWomenBtn" class="section-btn px-5 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
           <span>🧕</span>
-          <span>قسم السيدات (محمي 🔒)</span>
+          <span>قسم السيدات</span>
         </button>
       </div>
 
-      <!-- مؤشر حالة قسم السيدات -->
-      <div id="womenSectionIndicator" class="flex items-center gap-3 bg-pink-50 text-pink-700 border border-pink-200 px-4 py-2 rounded-xl text-xs font-bold" style="display: none;">
-        <span>🔐 أنتِ الآن في قسم السيدات (بيانات النساء فقط)</span>
-        <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-sm">
-          قفل القسم والعودة للرجالي
+      <!-- معلومات الحساب النشط حالياً وزر تسجيل الخروج -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-gray-500 font-semibold">المستخدم:</span>
+          <span class="font-bold text-gray-900" id="currentUserNameDisplay">-</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" id="currentUserRoleBadge">-</span>
+        </div>
+
+        <button type="button" id="btnLogout" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+          <span>🚪</span>
+          <span>خروج</span>
         </button>
       </div>
+
     </div>
 
     <!-- 1. قسم إحصائيات الشهر الحالي -->
@@ -176,10 +249,10 @@
 
         <!-- الأزرار التفاعلية -->
         <div class="flex flex-wrap items-center gap-2">
-          <!-- زر سجل الأدمن وإدارة الأمان -->
+          <!-- زر سجل الأدمن (يظهر للأدمن فقط) -->
           <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
             <span>🛡️</span>
-            <span>سجل الأدمن وإدارة الأمان</span>
+            <span>لوحة الأدمن وإدارة الأمان</span>
           </button>
 
           <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
@@ -265,47 +338,9 @@
 
   </div>
 
-  <!-- Modal: قفل قسم السيدات برقم سري مخصص للموظفة (مستقل تماماً) -->
-  <div id="womenPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center border-t-4 border-pink-500">
-      <div class="w-12 h-12 bg-pink-100 text-pink-700 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
-        🧕
-      </div>
-      <h3 class="text-base font-bold text-gray-800 mb-1">قسم السيدات (منطقة محمية)</h3>
-      <p class="text-xs text-gray-500 mb-4">أدخلي الرقم السري المخصص لمسؤولة التواصل للمتابعة</p>
-      <form id="womenPinForm" class="space-y-3">
-        <input type="password" id="womenPinInput" required placeholder="••••••••" autocomplete="off"
-               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-pink-500 font-mono">
-        <div class="flex gap-2">
-          <button type="button" id="closeWomenPinBtn" class="w-1/2 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
-          <button type="submit" class="w-1/2 py-2 bg-pink-600 text-white rounded-xl text-xs font-bold hover:bg-pink-700 transition cursor-pointer">دخول</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal: قفل الأدمن برقم سري مستقل -->
-  <div id="adminPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
-      <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
-        🔒
-      </div>
-      <h3 class="text-base font-bold text-gray-800 mb-1">منطقة الأدمن المحمية</h3>
-      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري الرئيسي للإدارة (Admin PIN) للمتابعة</p>
-      <form id="adminPinForm" class="space-y-3">
-        <input type="password" id="adminPinInput" required placeholder="••••••••" autocomplete="off"
-               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-blue-500 font-mono">
-        <div class="flex gap-2">
-          <button type="button" id="closeAdminPinBtn" class="w-1/2 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
-          <button type="submit" class="w-1/2 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black transition cursor-pointer">دخول</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة الأرقام السرية (خاص بالأدمن فقط) -->
+  <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة كلمات السر لجميع الحسابات (الأدمن فقط) -->
   <div id="adminHistoryModal" class="fixed inset-0 bg-black/70 items-center justify-center p-4 z-50" style="display: none;">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
       
       <!-- Header -->
       <div class="flex flex-wrap items-center justify-between pb-4 border-b gap-3">
@@ -314,20 +349,24 @@
             🛡️
           </div>
           <div>
-            <h3 class="text-base font-bold text-gray-900">سجل حركات الموظفين وإدارة الأمان (الأدمن فقط)</h3>
-            <p class="text-xs text-gray-500">التحكم الحصري في كلمات السر المستقلة ومتابعة النشاطات</p>
+            <h3 class="text-base font-bold text-gray-900">لوحة الإدارة وسجل الحركات وإدارة الحسابات</h3>
+            <p class="text-xs text-gray-500">التحكم في كلمات سر الموظفين والأدمن ومتابعة دقيقة لكل التعديلات</p>
           </div>
         </div>
         
-        <!-- أزرار إدارة الأمان والـ PIN للأدمن فقط -->
+        <!-- أزرار إدارة كلمات السر للأدمن -->
         <div class="flex flex-wrap items-center gap-2">
-          <button type="button" id="btnChangeAdminPin" class="bg-slate-800 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+          <button type="button" id="btnChangeAdminPass" class="bg-slate-800 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>🔑</span>
-            <span>تغيير PIN الأدمن</span>
+            <span>تغيير باسورد الأدمن</span>
           </button>
-          <button type="button" id="btnChangeWomenPinAdmin" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+          <button type="button" id="btnChangeMenPass" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+            <span>👨</span>
+            <span>تغيير باسورد الرجال</span>
+          </button>
+          <button type="button" id="btnChangeWomenPass" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>🧕</span>
-            <span>تغيير PIN قسم السيدات</span>
+            <span>تغيير باسورد السيدات</span>
           </button>
           <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>📥</span>
@@ -350,6 +389,7 @@
           <option value="حذف متعدد">حذف متعدد</option>
           <option value="استيراد شيت">استيراد شيت</option>
           <option value="أمان وكلمات سر">أمان وكلمات سر</option>
+          <option value="تسجيل دخول">تسجيل دخول</option>
         </select>
 
         <select id="logEmployeeFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
@@ -363,7 +403,7 @@
           <thead class="bg-gray-100 text-gray-700 font-bold sticky top-0">
             <tr>
               <th class="p-3">التوقيت والتاريخ</th>
-              <th class="p-3">الموظف</th>
+              <th class="p-3">المستخدم / الموظف</th>
               <th class="p-3">نوع الحركة</th>
               <th class="p-3">العميل المستهدف</th>
               <th class="p-3">التفاصيل والتغيير</th>
@@ -413,7 +453,7 @@
           <label class="block text-xs font-semibold text-gray-600 mb-1">القسم المستهدف</label>
           <select id="clientCategory" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
             <option value="men">القسم الرجالي 👨</option>
-            <option value="women">قسم السيدات 🧕 (محمي)</option>
+            <option value="women">قسم السيدات 🧕</option>
           </select>
         </div>
 
@@ -457,7 +497,7 @@
   <div id="employeeModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 relative">
       <div class="flex items-center justify-between mb-4 border-b pb-3">
-        <h3 class="text-base font-bold text-gray-800" id="employeeModalTitle">👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي)</h3>
+        <h3 class="text-base font-bold text-gray-800" id="employeeModalTitle">👥 تقرير أداء وتوزيع الموظفين</h3>
         <button type="button" id="closeEmployeeModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
       </div>
       <div class="overflow-x-auto">
@@ -540,35 +580,57 @@
         "محمد مدني"
       ];
 
+      // حسابات النظام المتزامنة سحابياً
+      let cloudUsers = {
+        admin: { pass: '123', role: 'admin', name: 'المدير العام (Admin)' },
+        men: { pass: '111', role: 'men', name: 'موظف القسم الرجالي' },
+        women: { pass: '222', role: 'women', name: 'مسؤولة قسم السيدات' }
+      };
+
+      let currentUser = null;
       let clients = [];
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
       let currentSection = 'men'; // 'men' | 'women'
-      let isWomenSectionUnlocked = false;
 
       // متغيرات إدارة الصفحات
       let currentPage = 1;
       let pageSize = 50;
       let searchDebounceTimer = null;
-      
-      // ✅ الأرقام السرية المنفصلة تماماً (الأدمن الافتراضي 1234، السيدات الافتراضي 7788)
-      function getAdminPin() {
-        return localStorage.getItem('crm_admin_secret_pin') || '1234';
-      }
-      function setAdminPin(newPin) {
-        localStorage.setItem('crm_admin_secret_pin', newPin);
+
+      // جلب كلمات السر المحدثة من السحابة لتعمل على كل الأجهزة
+      async function fetchSettingsFromCloud() {
+        if (!supabase) return;
+        try {
+          const { data, error } = await supabase.from('crm_settings').select('*');
+          if (!error && data && data.length > 0) {
+            data.forEach(item => {
+              if (item.key === 'pass_admin' && item.value) cloudUsers.admin.pass = String(item.value).trim();
+              if (item.key === 'pass_men' && item.value) cloudUsers.men.pass = String(item.value).trim();
+              if (item.key === 'pass_women' && item.value) cloudUsers.women.pass = String(item.value).trim();
+            });
+          }
+        } catch (e) {
+          console.warn("Settings cloud sync warning:", e);
+        }
       }
 
-      function getWomenPin() {
-        const pin = localStorage.getItem('crm_women_secret_pin');
-        if (!pin || pin === getAdminPin()) {
-          return '7788';
+      // تحديث كلمة سر مستخدم معين في السحابة
+      async function updateCloudPassword(key, newPass) {
+        if (key === 'pass_admin') cloudUsers.admin.pass = String(newPass).trim();
+        if (key === 'pass_men') cloudUsers.men.pass = String(newPass).trim();
+        if (key === 'pass_women') cloudUsers.women.pass = String(newPass).trim();
+
+        if (supabase) {
+          try {
+            await supabase
+              .from('crm_settings')
+              .upsert({ key: key, value: String(newPass).trim() }, { onConflict: 'key' });
+          } catch (e) {
+            console.warn("Error persisting password to cloud:", e);
+          }
         }
-        return pin;
-      }
-      function setWomenPin(newPin) {
-        localStorage.setItem('crm_women_secret_pin', newPin);
       }
 
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -586,7 +648,7 @@
         return `${dateStr}، ${timeStr}`;
       }
 
-      // دالة تصحيح وتهيئة أرقام الهواتف وجعلها 11 رقماً تبدأ بـ 01
+      // دالة تصحيح وتهيئة أرقام الهواتف (11 رقم تبدأ بـ 01)
       function normalizePhoneNumber(rawPhone) {
         if (!rawPhone && rawPhone !== 0) return '';
         let str = String(rawPhone).trim();
@@ -636,7 +698,7 @@
       async function logActivity(actionType, employee, clientName, details) {
         const logEntry = {
           action_type: actionType,
-          employee: employee || 'غير محدد',
+          employee: employee || (currentUser ? currentUser.name : 'غير محدد'),
           client_name: clientName || '-',
           details: details || '',
           timestamp: getCurrentFormattedTimestamp()
@@ -702,6 +764,7 @@
           case 'حذف متعدد': return '<span class="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">❌ حذف متعدد</span>';
           case 'استيراد شيت': return '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">📥 استيراد شيت</span>';
           case 'أمان وكلمات سر': return '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔒 أمان وكلمات سر</span>';
+          case 'تسجيل دخول': return '<span class="bg-teal-100 text-teal-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔑 تسجيل دخول</span>';
           default: return `<span class="bg-gray-100 text-gray-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${type}</span>`;
         }
       }
@@ -717,7 +780,7 @@
         return cleaned;
       }
 
-      // جلب البيانات من السحابة بالدفعات (10,000+ سجل)
+      // جلب البيانات من السحابة
       async function fetchClientsFromCloud() {
         if (!supabase) return;
         const statusEl = document.getElementById('syncStatus');
@@ -740,21 +803,15 @@
               .range(from, from + batchSize - 1);
 
             if (error) {
-              console.warn("Paged fetch fallback triggered:", error);
               const fallbackRes = await supabase.from('clients').select('*');
-              if (fallbackRes.data) {
-                allData = fallbackRes.data;
-              }
+              if (fallbackRes.data) allData = fallbackRes.data;
               break;
             }
 
             if (data && data.length > 0) {
               allData = allData.concat(data);
-              if (data.length < batchSize) {
-                hasMore = false;
-              } else {
-                from += batchSize;
-              }
+              if (data.length < batchSize) hasMore = false;
+              else from += batchSize;
             } else {
               hasMore = false;
             }
@@ -792,12 +849,19 @@
               fetchClientsFromCloud();
             })
             .subscribe();
+
+          supabase
+            .channel('crm_settings_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_settings' }, () => {
+              fetchSettingsFromCloud();
+            })
+            .subscribe();
         } catch (e) {
           console.warn("Realtime error:", e);
         }
       }
 
-      // فلترة صارمة: القسم الرجالي يعرض فقط الرجال، وقسم السيدات يعرض فقط النساء
+      // فلترة صارمة حسب القسم المفتوح
       function getActiveSectionClients() {
         if (currentSection === 'women') {
           return clients.filter(c => c.category === 'women');
@@ -1021,7 +1085,7 @@
               } else {
                 logActivity(
                   'تغيير حالة',
-                  targetClient ? targetClient.employee : 'غير محدد',
+                  currentUser ? currentUser.name : (targetClient ? targetClient.employee : 'غير محدد'),
                   targetClient ? targetClient.name : '-',
                   `تم تغيير الحالة من [${oldStatus}] إلى [${newStatus}]`
                 );
@@ -1051,7 +1115,7 @@
                 } else {
                   logActivity(
                     'حذف عميل',
-                    targetClient ? targetClient.employee : 'غير محدد',
+                    currentUser ? currentUser.name : 'غير محدد',
                     targetClient ? targetClient.name : '-',
                     `تم حذف العميل برقم هاتف [${targetClient ? targetClient.phone : '-'}] ومبلغ [${targetClient ? targetClient.amount : 0} ج.م]`
                   );
@@ -1348,24 +1412,21 @@
 
         const menBtn = document.getElementById('sectionMenBtn');
         const womBtn = document.getElementById('sectionWomenBtn');
-        const indicator = document.getElementById('womenSectionIndicator');
         const heroStats = document.getElementById('heroStatsContainer');
         const heroTitle = document.getElementById('heroTitle');
         const heroIcon = document.getElementById('heroIcon');
 
         if (section === 'women') {
-          menBtn.classList.remove('section-active');
-          womBtn.classList.add('section-active');
-          indicator.style.display = 'flex';
+          if (menBtn) menBtn.classList.remove('section-active');
+          if (womBtn) womBtn.classList.add('section-active');
           heroStats.className = 'bg-[#fdf2f8] border border-[#fbcfe8] rounded-2xl p-6 shadow-sm';
-          heroTitle.innerText = 'إحصائيات قسم السيدات (المحمي)';
+          heroTitle.innerText = 'إحصائيات قسم السيدات 🧕';
           heroIcon.innerText = '🧕';
         } else {
-          womBtn.classList.remove('section-active');
-          menBtn.classList.add('section-active');
-          indicator.style.display = 'none';
+          if (womBtn) womBtn.classList.remove('section-active');
+          if (menBtn) menBtn.classList.add('section-active');
           heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
-          heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي)';
+          heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي 👨)';
           heroIcon.innerText = '👨';
         }
 
@@ -1374,10 +1435,106 @@
         updateBulkActionBar();
       }
 
-      function startApp() {
-        initDateHeader();
+      // تطبيق الصلاحيات والواجهة حسب دور المستخدم
+      function applyUserPermissions() {
+        if (!currentUser) return;
+
+        const nameDisplay = document.getElementById('currentUserNameDisplay');
+        const roleBadge = document.getElementById('currentUserRoleBadge');
+        const adminHistoryBtn = document.getElementById('btnAdminHistory');
+        const switcherContainer = document.getElementById('sectionSwitcherContainer');
+
+        if (nameDisplay) nameDisplay.innerText = currentUser.name;
+
+        if (currentUser.role === 'admin') {
+          roleBadge.innerText = '👑 مدير النظام';
+          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700';
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'flex';
+          if (switcherContainer) switcherContainer.style.display = 'flex';
+          switchSection('men');
+        } else if (currentUser.role === 'men') {
+          roleBadge.innerText = '👨 موظف رجال';
+          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          switchSection('men');
+        } else if (currentUser.role === 'women') {
+          roleBadge.innerText = '🧕 موظفة سيدات';
+          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700';
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          switchSection('women');
+        }
+
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+
         fetchClientsFromCloud();
+      }
+
+      async function startApp() {
+        initDateHeader();
+        await fetchSettingsFromCloud();
         setupRealtimeListener();
+
+        // فحص الجلسة المحفوظة
+        const savedSession = sessionStorage.getItem('crm_logged_user');
+        if (savedSession) {
+          try {
+            currentUser = JSON.parse(savedSession);
+            applyUserPermissions();
+          } catch (e) {
+            sessionStorage.removeItem('crm_logged_user');
+          }
+        }
+
+        // تسجيل الدخول
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const userInp = document.getElementById('loginUsername').value.trim().toLowerCase();
+          const passInp = document.getElementById('loginPassword').value.trim();
+          const errorAlert = document.getElementById('loginErrorAlert');
+          const submitBtn = document.getElementById('loginSubmitBtn');
+
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'جاري التحقق...';
+
+          await fetchSettingsFromCloud();
+
+          let matched = null;
+          if (userInp === 'admin' && passInp === cloudUsers.admin.pass) {
+            matched = { username: 'admin', role: 'admin', name: cloudUsers.admin.name };
+          } else if (userInp === 'men' && passInp === cloudUsers.men.pass) {
+            matched = { username: 'men', role: 'men', name: cloudUsers.men.name };
+          } else if (userInp === 'women' && passInp === cloudUsers.women.pass) {
+            matched = { username: 'women', role: 'women', name: cloudUsers.women.name };
+          }
+
+          if (matched) {
+            currentUser = matched;
+            sessionStorage.setItem('crm_logged_user', JSON.stringify(currentUser));
+            logActivity('تسجيل دخول', currentUser.name, '-', 'تم تسجيل الدخول بنجاح للنظام');
+            errorAlert.style.display = 'none';
+            applyUserPermissions();
+          } else {
+            errorAlert.innerText = 'اسم المستخدم أو كلمة المرور غير صحيحة، يرجى المحاولة مجدداً.';
+            errorAlert.style.display = 'block';
+          }
+
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'تسجيل الدخول للمنظومة 🚀';
+        });
+
+        // تسجيل الخروج
+        document.getElementById('btnLogout').addEventListener('click', function() {
+          if (confirm('هل ترغب بالتأكيد في تسجيل الخروج؟')) {
+            sessionStorage.removeItem('crm_logged_user');
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginScreen').style.display = 'flex';
+          }
+        });
 
         const phoneInput = document.getElementById('clientPhone');
         if (phoneInput) {
@@ -1387,39 +1544,11 @@
         }
 
         document.getElementById('sectionMenBtn').addEventListener('click', () => {
-          switchSection('men');
+          if (currentUser && currentUser.role === 'admin') switchSection('men');
         });
 
         document.getElementById('sectionWomenBtn').addEventListener('click', () => {
-          if (isWomenSectionUnlocked) {
-            switchSection('women');
-          } else {
-            document.getElementById('womenPinInput').value = '';
-            document.getElementById('womenPinModal').style.display = 'flex';
-            document.getElementById('womenPinInput').focus();
-          }
-        });
-
-        document.getElementById('closeWomenPinBtn').addEventListener('click', () => {
-          document.getElementById('womenPinModal').style.display = 'none';
-        });
-
-        // ✅ التحقق الحصري من باسورد قسم السيدات (أو دخول الأدمن بالباسورد الرئيسي)
-        document.getElementById('womenPinForm').addEventListener('submit', function(e) {
-          e.preventDefault();
-          const entered = document.getElementById('womenPinInput').value;
-          if (entered === getWomenPin() || entered === getAdminPin()) {
-            isWomenSectionUnlocked = true;
-            document.getElementById('womenPinModal').style.display = 'none';
-            switchSection('women');
-          } else {
-            alert('الرقم السري لقسم السيدات غير صحيح!');
-          }
-        });
-
-        document.getElementById('btnLockWomenSection').addEventListener('click', () => {
-          isWomenSectionUnlocked = false;
-          switchSection('men');
+          if (currentUser && currentUser.role === 'admin') switchSection('women');
         });
 
         document.getElementById('clientEmployeeSelect').addEventListener('change', function() {
@@ -1438,25 +1567,13 @@
           renderTable();
         });
 
+        // فتح لوحة الأدمن (للأدمن فقط)
         document.getElementById('btnAdminHistory').addEventListener('click', function() {
-          document.getElementById('adminPinInput').value = '';
-          document.getElementById('adminPinModal').style.display = 'flex';
-          document.getElementById('adminPinInput').focus();
-        });
-
-        document.getElementById('closeAdminPinBtn').addEventListener('click', () => {
-          document.getElementById('adminPinModal').style.display = 'none';
-        });
-
-        document.getElementById('adminPinForm').addEventListener('submit', function(e) {
-          e.preventDefault();
-          const enteredPin = document.getElementById('adminPinInput').value;
-          if (enteredPin === getAdminPin()) {
-            document.getElementById('adminPinModal').style.display = 'none';
+          if (currentUser && currentUser.role === 'admin') {
             fetchActivityLogs();
             document.getElementById('adminHistoryModal').style.display = 'flex';
           } else {
-            alert('الرقم السري الخاص بالأدمن غير صحيح!');
+            alert('هذه المنطقة مخصصة للمدير العام فقط.');
           }
         });
 
@@ -1464,45 +1581,54 @@
           document.getElementById('adminHistoryModal').style.display = 'none';
         });
 
-        // ✅ تغيير الرقم السري للأدمن مع منع التطابق مع باسورد السيدات
-        document.getElementById('btnChangeAdminPin').addEventListener('click', function() {
-          const currentPin = prompt('أدخل الرقم السري الحالي للأدمن:');
-          if (currentPin === getAdminPin()) {
-            const newPin = prompt('أدخل الرقم السري الجديد للأدمن (4 أرقام على الأقل):');
-            if (newPin && newPin.trim().length >= 4) {
-              if (newPin.trim() === getWomenPin()) {
-                alert('خطأ أمني: يجب أن يكون باسورد الأدمن مختلفاً تماماً عن باسورد قسم السيدات!');
-                return;
-              }
-              setAdminPin(newPin.trim());
-              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث الرقم السري الرئيسي للأدمن');
-              alert('تم تحديث الرقم السري للأدمن بنجاح 🔒');
+        // ✅ تغيير باسورد الأدمن ومزامنته سحابياً
+        document.getElementById('btnChangeAdminPass').addEventListener('click', async function() {
+          const currentPin = prompt('أدخل كلمة المرور الحالية للأدمن للتأكيد:');
+          if (currentPin && currentPin.trim() === cloudUsers.admin.pass) {
+            const newPin = prompt('أدخل كلمة المرور الجديدة لحساب الأدمن:');
+            if (newPin && newPin.trim().length >= 3) {
+              await updateCloudPassword('pass_admin', newPin.trim());
+              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث كلمة مرور حساب الأدمن ومزامنتها سحابياً');
+              alert('تم تحديث كلمة مرور الأدمن ومزامنتها سحابياً بنجاح 🔒');
             } else {
-              alert('يجب أن يتكون الرقم السري من 4 أرقام أو أحرف على الأقل.');
+              alert('يجب أن تتكون كلمة المرور من 3 خانات على الأقل.');
             }
           } else if (currentPin !== null) {
-            alert('الرقم السري الحالي للأدمن غير صحيح.');
+            alert('كلمة المرور الحالية غير صحيحة.');
           }
         });
 
-        // ✅ تغيير الرقم السري لقسم السيدات مع منع التطابق مع باسورد الأدمن
-        document.getElementById('btnChangeWomenPinAdmin').addEventListener('click', function() {
-          const adminCheck = prompt('أدخل الرقم السري الرئيسي للأدمن للموافقة على تغيير PIN قسم السيدات:');
-          if (adminCheck === getAdminPin()) {
-            const newWomenPin = prompt('أدخل الرقم السري الجديد المخصص لقسم السيدات (4 أرقام على الأقل):');
-            if (newWomenPin && newWomenPin.trim().length >= 4) {
-              if (newWomenPin.trim() === getAdminPin()) {
-                alert('خطأ أمني: يجب أن يكون باسورد قسم السيدات مختلفاً تماماً عن باسورد الأدمن!');
-                return;
-              }
-              setWomenPin(newWomenPin.trim());
-              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تغيير الرقم السري الخاص بقسم السيدات');
-              alert('تم تحديث الرقم السري لقسم السيدات بنجاح 🧕🔒. يرجى تزويد مسؤولة التواصل بالرقم الجديد.');
+        // ✅ تغيير باسورد موظف الرجال ومزامنته سحابياً
+        document.getElementById('btnChangeMenPass').addEventListener('click', async function() {
+          const adminCheck = prompt('أدخل كلمة مرور الأدمن للموافقة على تغيير باسورد موظف الرجال:');
+          if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+            const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لموظف الرجال (user: men):');
+            if (newPass && newPass.trim().length >= 3) {
+              await updateCloudPassword('pass_men', newPass.trim());
+              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب موظف الرجال ومزامنتها');
+              alert('تم تحديث كلمة مرور حساب الرجال بنجاح 👨🔒.');
             } else {
-              alert('الرقم السري يجب أن يكون 4 أرقام على الأقل.');
+              alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
             }
           } else if (adminCheck !== null) {
-            alert('عذراً! لا يمكن تغيير الرقم السري إلا بواسطة الأدمن (رقم الأدمن غير صحيح).');
+            alert('كلمة مرور الأدمن غير صحيحة.');
+          }
+        });
+
+        // ✅ تغيير باسورد مسؤولة السيدات ومزامنته سحابياً
+        document.getElementById('btnChangeWomenPass').addEventListener('click', async function() {
+          const adminCheck = prompt('أدخل كلمة مرور الأدمن للموافقة على تغيير باسورد مسؤولة السيدات:');
+          if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+            const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لمسؤولة السيدات (user: women):');
+            if (newPass && newPass.trim().length >= 3) {
+              await updateCloudPassword('pass_women', newPass.trim());
+              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب مسؤولة السيدات ومزامنتها');
+              alert('تم تحديث كلمة مرور حساب السيدات بنجاح 🧕🔒.');
+            } else {
+              alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
+            }
+          } else if (adminCheck !== null) {
+            alert('كلمة مرور الأدمن غير صحيحة.');
           }
         });
 
@@ -1587,7 +1713,7 @@
               }
 
               if (!hasError) {
-                logActivity('حذف متعدد', 'الأدمن / الموظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
+                logActivity('حذف متعدد', currentUser ? currentUser.name : 'موظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
                 selectedIds.clear();
                 updateBulkActionBar();
                 fetchClientsFromCloud();
@@ -1660,11 +1786,8 @@
 
               if (res.error && res.error.message && res.error.message.includes('category')) {
                 delete clientPayload.category;
-                if (id) {
-                  res = await supabase.from('clients').update(clientPayload).eq('id', id);
-                } else {
-                  res = await supabase.from('clients').insert([clientPayload]);
-                }
+                if (id) res = await supabase.from('clients').update(clientPayload).eq('id', id);
+                else res = await supabase.from('clients').insert([clientPayload]);
               }
 
               if (res.error) {
@@ -1672,7 +1795,7 @@
               } else {
                 logActivity(
                   id ? 'تعديل بيانات' : 'إضافة عميل',
-                  clientPayload.employee,
+                  currentUser ? currentUser.name : clientPayload.employee,
                   clientPayload.name,
                   `تم ${id ? 'تعديل' : 'إضافة'} بيانات العميل (${clientPayload.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي'}) - الهاتف: [${clientPayload.phone}]`
                 );
@@ -1787,7 +1910,7 @@
                   }
                 }
 
-                logActivity('استيراد شيت', 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد وتصنيف ${rowsToInsert.length} عميل وتوزيعهم بنجاح`);
+                logActivity('استيراد شيت', currentUser ? currentUser.name : 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد وتصنيف ${rowsToInsert.length} عميل وتوزيعهم بنجاح`);
                 alert(`تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل وتوزيعهم بالقسم بنجاح.`);
                 fetchClientsFromCloud();
               }
