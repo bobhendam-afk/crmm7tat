@@ -66,7 +66,7 @@
         </button>
       </div>
 
-      <!-- مؤشر حالة قسم السيدات (تم حظر تغيير الـ PIN منه وقصره على الأدمن) -->
+      <!-- مؤشر حالة قسم السيدات -->
       <div id="womenSectionIndicator" class="flex items-center gap-3 bg-pink-50 text-pink-700 border border-pink-200 px-4 py-2 rounded-xl text-xs font-bold" style="display: none;">
         <span>🔐 أنتِ الآن في قسم السيدات (بيانات النساء فقط)</span>
         <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-sm">
@@ -176,7 +176,7 @@
 
         <!-- الأزرار التفاعلية -->
         <div class="flex flex-wrap items-center gap-2">
-          <!-- زر سجل الأدمن -->
+          <!-- زر سجل الأدمن وإدارة الأمان -->
           <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
             <span>🛡️</span>
             <span>سجل الأدمن وإدارة الأمان</span>
@@ -265,14 +265,14 @@
 
   </div>
 
-  <!-- Modal: قفل قسم السيدات برقم سري مخصص -->
+  <!-- Modal: قفل قسم السيدات برقم سري مخصص للموظفة (مستقل تماماً) -->
   <div id="womenPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center border-t-4 border-pink-500">
       <div class="w-12 h-12 bg-pink-100 text-pink-700 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
         🧕
       </div>
       <h3 class="text-base font-bold text-gray-800 mb-1">قسم السيدات (منطقة محمية)</h3>
-      <p class="text-xs text-gray-500 mb-4">أدخلي الرقم السري الخاص بمسؤولة التواصل أو الإدارة للمتابعة</p>
+      <p class="text-xs text-gray-500 mb-4">أدخلي الرقم السري المخصص لمسؤولة التواصل للمتابعة</p>
       <form id="womenPinForm" class="space-y-3">
         <input type="password" id="womenPinInput" required placeholder="••••••••" autocomplete="off"
                class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-pink-500 font-mono">
@@ -284,14 +284,14 @@
     </div>
   </div>
 
-  <!-- Modal: قفل الأدمن برقم سري -->
+  <!-- Modal: قفل الأدمن برقم سري مستقل -->
   <div id="adminPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center">
       <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
         🔒
       </div>
       <h3 class="text-base font-bold text-gray-800 mb-1">منطقة الأدمن المحمية</h3>
-      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري الخاص بالإدارة للمتابعة</p>
+      <p class="text-xs text-gray-500 mb-4">أدخل الرقم السري الرئيسي للإدارة (Admin PIN) للمتابعة</p>
       <form id="adminPinForm" class="space-y-3">
         <input type="password" id="adminPinInput" required placeholder="••••••••" autocomplete="off"
                class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-blue-500 font-mono">
@@ -315,7 +315,7 @@
           </div>
           <div>
             <h3 class="text-base font-bold text-gray-900">سجل حركات الموظفين وإدارة الأمان (الأدمن فقط)</h3>
-            <p class="text-xs text-gray-500">متابعة دقيقة للنشاطات والتحكم الحصري في كلمات السر والأرقام السرية للأقسام</p>
+            <p class="text-xs text-gray-500">التحكم الحصري في كلمات السر المستقلة ومتابعة النشاطات</p>
           </div>
         </div>
         
@@ -552,7 +552,7 @@
       let pageSize = 50;
       let searchDebounceTimer = null;
       
-      // الأرقام السرية (إدارة حصرية للأدمن)
+      // ✅ الأرقام السرية المنفصلة تماماً (الأدمن الافتراضي 1234، السيدات الافتراضي 7788)
       function getAdminPin() {
         return localStorage.getItem('crm_admin_secret_pin') || '1234';
       }
@@ -561,7 +561,11 @@
       }
 
       function getWomenPin() {
-        return localStorage.getItem('crm_women_secret_pin') || '5555';
+        const pin = localStorage.getItem('crm_women_secret_pin');
+        if (!pin || pin === getAdminPin()) {
+          return '7788';
+        }
+        return pin;
       }
       function setWomenPin(newPin) {
         localStorage.setItem('crm_women_secret_pin', newPin);
@@ -1400,6 +1404,7 @@
           document.getElementById('womenPinModal').style.display = 'none';
         });
 
+        // ✅ التحقق الحصري من باسورد قسم السيدات (أو دخول الأدمن بالباسورد الرئيسي)
         document.getElementById('womenPinForm').addEventListener('submit', function(e) {
           e.preventDefault();
           const entered = document.getElementById('womenPinInput').value;
@@ -1451,7 +1456,7 @@
             fetchActivityLogs();
             document.getElementById('adminHistoryModal').style.display = 'flex';
           } else {
-            alert('الرقم السري غير صحيح!');
+            alert('الرقم السري الخاص بالأدمن غير صحيح!');
           }
         });
 
@@ -1459,12 +1464,16 @@
           document.getElementById('adminHistoryModal').style.display = 'none';
         });
 
-        // ✅ تغيير الرقم السري للأدمن (متاح فقط داخل لوحة الأدمن)
+        // ✅ تغيير الرقم السري للأدمن مع منع التطابق مع باسورد السيدات
         document.getElementById('btnChangeAdminPin').addEventListener('click', function() {
           const currentPin = prompt('أدخل الرقم السري الحالي للأدمن:');
           if (currentPin === getAdminPin()) {
             const newPin = prompt('أدخل الرقم السري الجديد للأدمن (4 أرقام على الأقل):');
             if (newPin && newPin.trim().length >= 4) {
+              if (newPin.trim() === getWomenPin()) {
+                alert('خطأ أمني: يجب أن يكون باسورد الأدمن مختلفاً تماماً عن باسورد قسم السيدات!');
+                return;
+              }
               setAdminPin(newPin.trim());
               logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث الرقم السري الرئيسي للأدمن');
               alert('تم تحديث الرقم السري للأدمن بنجاح 🔒');
@@ -1472,16 +1481,20 @@
               alert('يجب أن يتكون الرقم السري من 4 أرقام أو أحرف على الأقل.');
             }
           } else if (currentPin !== null) {
-            alert('الرقم السري الحالي غير صحيح.');
+            alert('الرقم السري الحالي للأدمن غير صحيح.');
           }
         });
 
-        // ✅ تغيير الرقم السري لقسم السيدات (متاح حصرياً للأدمن عبر إدخال Admin PIN)
+        // ✅ تغيير الرقم السري لقسم السيدات مع منع التطابق مع باسورد الأدمن
         document.getElementById('btnChangeWomenPinAdmin').addEventListener('click', function() {
           const adminCheck = prompt('أدخل الرقم السري الرئيسي للأدمن للموافقة على تغيير PIN قسم السيدات:');
           if (adminCheck === getAdminPin()) {
             const newWomenPin = prompt('أدخل الرقم السري الجديد المخصص لقسم السيدات (4 أرقام على الأقل):');
             if (newWomenPin && newWomenPin.trim().length >= 4) {
+              if (newWomenPin.trim() === getAdminPin()) {
+                alert('خطأ أمني: يجب أن يكون باسورد قسم السيدات مختلفاً تماماً عن باسورد الأدمن!');
+                return;
+              }
               setWomenPin(newWomenPin.trim());
               logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تغيير الرقم السري الخاص بقسم السيدات');
               alert('تم تحديث الرقم السري لقسم السيدات بنجاح 🧕🔒. يرجى تزويد مسؤولة التواصل بالرقم الجديد.');
