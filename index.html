@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro (High Performance)</title>
+  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- XLSX Library -->
@@ -21,6 +21,12 @@
     }
     .row-selected {
       background-color: #eff6ff !important;
+    }
+    .section-active {
+      background-color: #ffffff !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+      color: #1e293b !important;
+      font-weight: 800 !important;
     }
   </style>
 </head>
@@ -47,15 +53,40 @@
 
   <div class="max-w-7xl mx-auto space-y-5">
 
+    <!-- شريط التبديل بين الأقسام الرئيسية (القسم العام / قسم السيدات المحمي) -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-2.5 rounded-2xl border border-gray-100 shadow-sm">
+      <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+        <button type="button" id="sectionGeneralBtn" class="section-btn section-active px-4 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer">
+          <span>🏢</span>
+          <span>القسم العام (الرجال والكل)</span>
+        </button>
+        <button type="button" id="sectionWomenBtn" class="section-btn px-4 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
+          <span>🧕</span>
+          <span>قسم السيدات (محمي 🔒)</span>
+        </button>
+      </div>
+
+      <!-- مؤشر حالة القسم الحالي -->
+      <div id="womenSectionIndicator" class="flex items-center gap-2 bg-pink-50 text-pink-700 border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold" style="display: none;">
+        <span>🔐 أنتِ الآن في قسم السيدات المحمي</span>
+        <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer">
+          قفل القسم والعودة للعام
+        </button>
+        <button type="button" id="btnChangeWomenPin" class="text-pink-700 hover:underline text-[11px] font-semibold cursor-pointer">
+          تغيير الـ PIN
+        </button>
+      </div>
+    </div>
+
     <!-- 1. قسم إحصائيات الشهر الحالي -->
-    <div class="bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm">
+    <div class="bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm" id="heroStatsContainer">
       <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
         
         <!-- إجمالي عملاء الشهر -->
         <div class="text-right w-full lg:w-auto">
           <div class="flex items-center gap-2 text-gray-800 font-bold text-lg md:text-xl">
-            <span class="text-xl">📊</span>
-            <h2>إحصائيات الشهر الحالي</h2>
+            <span class="text-xl" id="heroIcon">📊</span>
+            <h2 id="heroTitle">إحصائيات الشهر الحالي</h2>
             <span id="syncStatus" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2">🟢 متصل سحابياً</span>
           </div>
           <div class="mt-4">
@@ -130,7 +161,7 @@
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
       <div class="relative">
-        <input type="text" id="searchInput" placeholder="بحث سريع في الآلاف من السجلات (الاسم، الرقم، الموظف، الملاحظات)..." 
+        <input type="text" id="searchInput" placeholder="بحث سريع (الاسم، الرقم، الموظف، الملاحظات)..." 
                class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <span class="absolute right-3 top-3 text-gray-400">🔍</span>
       </div>
@@ -196,6 +227,7 @@
               <th class="p-3.5">رقم الهاتف</th>
               <th class="p-3.5">المبلغ</th>
               <th class="p-3.5">الفئة</th>
+              <th class="p-3.5">القسم</th>
               <th class="p-3.5">حالة التواصل ووقت التسجيل</th>
               <th class="p-3.5">الموظف المسؤول</th>
               <th class="p-3.5">تاريخ الإضافة</th>
@@ -212,7 +244,7 @@
         لا توجد بيانات مطابقة حالياً.
       </div>
 
-      <!-- شريط الصفحات والتنقل (Pagination Bar) لسرعة الأداء مع 10,000+ سجل -->
+      <!-- شريط الصفحات والتنقل (Pagination Bar) -->
       <div class="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
         <div class="flex items-center gap-3 text-xs text-gray-600">
           <span>عرض</span>
@@ -229,12 +261,30 @@
         </div>
 
         <div class="flex items-center gap-1 text-xs" id="paginationControls">
-          <!-- أزرار الصفحات تتولد ديناميكياً -->
         </div>
       </div>
 
     </div>
 
+  </div>
+
+  <!-- Modal: قفل قسم السيدات برقم سري مخصص -->
+  <div id="womenPinModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 text-center border-t-4 border-pink-500">
+      <div class="w-12 h-12 bg-pink-100 text-pink-700 rounded-full flex items-center justify-center mx-auto text-xl mb-3">
+        🧕
+      </div>
+      <h3 class="text-base font-bold text-gray-800 mb-1">قسم السيدات (منطقة محمية)</h3>
+      <p class="text-xs text-gray-500 mb-4">أدخلي الرقم السري الخاص بمسؤولة التواصل أو الإدارة للمتابعة</p>
+      <form id="womenPinForm" class="space-y-3">
+        <input type="password" id="womenPinInput" required placeholder="••••••••" autocomplete="off"
+               class="w-full border border-gray-300 rounded-xl p-2.5 text-center text-base tracking-widest outline-none focus:border-pink-500 font-mono">
+        <div class="flex gap-2">
+          <button type="button" id="closeWomenPinBtn" class="w-1/2 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
+          <button type="submit" class="w-1/2 py-2 bg-pink-600 text-white rounded-xl text-xs font-bold hover:bg-pink-700 transition cursor-pointer">دخول</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Modal: قفل الأدمن برقم سري -->
@@ -353,6 +403,27 @@
         </div>
 
         <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">تصنيف القسم</label>
+          <select id="clientCategory" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
+            <option value="general">القسم العام (رجال وعام)</option>
+            <option value="women">قسم السيدات 🧕 (محمي)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">الموظف المسؤول</label>
+          <select id="clientEmployeeSelect" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white">
+            <option value="auto">⚡ توزيع تلقائي عادل (تلقائي)</option>
+            <option value="عبدالرحمن أبو شامة">عبدالرحمن أبو شامة</option>
+            <option value="إبراهيم البغدادي">إبراهيم البغدادي</option>
+            <option value="محمد مدني">محمد مدني</option>
+            <option value="مسؤولة قسم السيدات">مسؤولة قسم السيدات</option>
+            <option value="custom">+ اسم موظف آخر...</option>
+          </select>
+          <input type="text" id="clientEmployeeCustom" placeholder="اكتب اسم الموظف..." class="w-full border rounded-xl p-2 text-xs outline-none focus:border-blue-500 mt-1.5" style="display: none;">
+        </div>
+
+        <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">حالة التواصل</label>
           <select id="clientStatus" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white">
             <option value="لم يتم">لم يتم</option>
@@ -360,11 +431,6 @@
             <option value="لم يرد">لم يرد</option>
             <option value="تذكير">تذكير</option>
           </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">الموظف المسؤول</label>
-          <input type="text" id="clientEmployee" placeholder="اسم الموظف" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500">
         </div>
 
         <div>
@@ -384,7 +450,7 @@
   <div id="employeeModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 relative">
       <div class="flex items-center justify-between mb-4 border-b pb-3">
-        <h3 class="text-base font-bold text-gray-800">👥 تقرير أداء الموظفين الإجمالي</h3>
+        <h3 class="text-base font-bold text-gray-800">👥 تقرير أداء وتوزيع الموظفين الإجمالي</h3>
         <button type="button" id="closeEmployeeModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
       </div>
       <div class="overflow-x-auto">
@@ -447,7 +513,7 @@
   <!-- JavaScript Code -->
   <script>
     (function() {
-      // ✅ بيانات الاتصال الرسمية بـ Supabase
+      // ✅ بيانات الاتصال بـ Supabase
       const SUPABASE_URL = 'https://hmukbdfzgrflvgultnkq.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtdWtiZGZ6Z3JmbHZndWx0bmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NjUyNDEsImV4cCI6MjEwMjM0MTI0MX0.uQk1UICaMxRZ0oTPTBAJXYuUaoFUuc5yL6rYVX1o_H4';
 
@@ -460,23 +526,38 @@
         }
       }
 
+      // ✅ قائمة الموظفين الرسمية للتوزيع التلقائي العادل
+      const DEFAULT_EMPLOYEES = [
+        "عبدالرحمن أبو شامة",
+        "إبراهيم البغدادي",
+        "محمد مدني"
+      ];
+
       let clients = [];
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
+      let currentSection = 'general'; // 'general' | 'women'
+      let isWomenSectionUnlocked = false;
 
-      // متغيرات إدارة الصفحات (Pagination) للتعامل مع 10,000+ سجل
+      // متغيرات إدارة الصفحات (Pagination)
       let currentPage = 1;
       let pageSize = 50;
       let searchDebounceTimer = null;
       
-      // الرقم السري للأدمن
+      // الأرقام السرية (للأدمن ولقسم السيدات)
       function getAdminPin() {
         return localStorage.getItem('crm_admin_secret_pin') || '1234';
       }
-
       function setAdminPin(newPin) {
         localStorage.setItem('crm_admin_secret_pin', newPin);
+      }
+
+      function getWomenPin() {
+        return localStorage.getItem('crm_women_secret_pin') || '5555';
+      }
+      function setWomenPin(newPin) {
+        localStorage.setItem('crm_women_secret_pin', newPin);
       }
 
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -492,6 +573,30 @@
         const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
         return `${dateStr}، ${timeStr}`;
+      }
+
+      // ✅ دالة اختيار الموظف التلقائي العادل (Load Balancing على الموظفين الثلاثة)
+      function getAutoAssignedEmployee() {
+        const counts = {};
+        DEFAULT_EMPLOYEES.forEach(emp => counts[emp] = 0);
+
+        clients.forEach(c => {
+          if (counts[c.employee] !== undefined) {
+            counts[c.employee]++;
+          }
+        });
+
+        let chosenEmp = DEFAULT_EMPLOYEES[0];
+        let minCount = counts[chosenEmp];
+
+        for (let i = 1; i < DEFAULT_EMPLOYEES.length; i++) {
+          const emp = DEFAULT_EMPLOYEES[i];
+          if (counts[emp] < minCount) {
+            minCount = counts[emp];
+            chosenEmp = emp;
+          }
+        }
+        return chosenEmp;
       }
 
       async function logActivity(actionType, employee, clientName, details) {
@@ -547,6 +652,13 @@
         }
       }
 
+      function getSectionBadge(category) {
+        if (category === 'women') {
+          return '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🧕 سيدات</span>';
+        }
+        return '<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🏢 عام</span>';
+      }
+
       function getActionBadge(type) {
         switch(type) {
           case 'تغيير حالة': return '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔄 تغيير حالة</span>';
@@ -565,7 +677,7 @@
         return cleaned;
       }
 
-      // ✅ جلب جميع السجلات بالدفعات لتجاوز حد 1,000 الافتراضي لسحب 10,000+ سجل
+      // جلب جميع السجلات بالدفعات لتجاوز حد 1,000 الافتراضي
       async function fetchClientsFromCloud() {
         if (!supabase) return;
         const statusEl = document.getElementById('syncStatus');
@@ -634,18 +746,27 @@
           .subscribe();
       }
 
+      // الحصول على السجلات النشطة بحسب القسم (عام أو سيدات)
+      function getActiveSectionClients() {
+        if (currentSection === 'women') {
+          return clients.filter(c => c.category === 'women');
+        }
+        return clients.filter(c => c.category !== 'women');
+      }
+
       function updateDashboardStats() {
+        const activeClients = getActiveSectionClients();
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-        const currentMonthClients = clients.filter(c => (c.date || '').startsWith(currentYearMonth));
+        const currentMonthClients = activeClients.filter(c => (c.date || '').startsWith(currentYearMonth));
         const heroEl = document.getElementById('heroMonthTotal');
         if (heroEl) heroEl.innerText = currentMonthClients.length.toLocaleString('ar-EG');
 
         let doneCount = 0, noAnswerCount = 0, pendingCount = 0, reminderCount = 0, totalRevenue = 0;
 
-        for (let i = 0; i < clients.length; i++) {
-          const c = clients[i];
+        for (let i = 0; i < activeClients.length; i++) {
+          const c = activeClients[i];
           if (c.status === 'تم') doneCount++;
           else if (c.status === 'لم يرد') noAnswerCount++;
           else if (c.status === 'لم يتم') pendingCount++;
@@ -678,7 +799,7 @@
         const cardP = document.getElementById('cardPending');
         const cardR = document.getElementById('cardRevenue');
 
-        if (cardT) cardT.innerText = clients.length.toLocaleString('ar-EG');
+        if (cardT) cardT.innerText = activeClients.length.toLocaleString('ar-EG');
         if (cardD) cardD.innerText = doneCount.toLocaleString('ar-EG');
         if (cardP) cardP.innerText = pendingCount.toLocaleString('ar-EG');
         if (cardR) cardR.innerText = totalRevenue.toLocaleString('ar-EG');
@@ -708,7 +829,7 @@
         }
       }
 
-      // ✅ فلترة وتصفح سريع جداً للجدول عبر الصفحات
+      // فلترة وتصفح سريع للجدول مع دعم قسم السيدات المحمي
       function renderTable() {
         const searchInput = document.getElementById('searchInput');
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
@@ -716,7 +837,8 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        let filtered = clients;
+        let filtered = getActiveSectionClients();
+
         if (currentTab !== 'الكل') {
           filtered = filtered.filter(c => c.status === currentTab);
         }
@@ -742,7 +864,6 @@
           emptyEl.style.display = (totalItems === 0) ? 'block' : 'none';
         }
 
-        // تحديث معلومات شريط الصفحات
         const infoEl = document.getElementById('paginationInfo');
         if (infoEl) {
           if (totalItems === 0) {
@@ -779,6 +900,7 @@
             <td class="p-3.5 font-mono text-gray-600 text-xs" dir="ltr">${c.phone || '-'}</td>
             <td class="p-3.5 font-bold text-blue-700">${Number(c.amount || 0).toLocaleString('ar-EG')} ج.م</td>
             <td class="p-3.5">${getTierBadge(tier)}</td>
+            <td class="p-3.5">${getSectionBadge(c.category)}</td>
             <td class="p-3.5" onclick="event.stopPropagation()">
               <div>
                 <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
@@ -795,742 +917,7 @@
                 ` : ''}
               </div>
             </td>
-            <td class="p-3.5 text-xs text-gray-600">${c.employee || 'غير محدد'}</td>
+            <td class="p-3.5 text-xs text-gray-800 font-semibold">${c.employee || 'غير محدد'}</td>
             <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
             <td class="p-3.5 text-xs text-gray-500 max-w-[180px] truncate" title="${c.notes || ''}">
-              ${c.notes ? `<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${c.notes}</span>` : '<span class="text-gray-300">-</span>'}
-            </td>
-            <td class="p-3.5 text-center" onclick="event.stopPropagation()">
-              <div class="flex items-center justify-center gap-1.5">
-                <a href="${waLink}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
-                  💬 واتساب
-                </a>
-                <button type="button" data-id="${c.id}" class="edit-btn text-blue-600 hover:text-blue-800 text-xs font-semibold px-1 cursor-pointer">تعديل</button>
-                <button type="button" data-id="${c.id}" class="del-btn text-red-500 hover:text-red-700 text-xs font-semibold px-1 cursor-pointer">حذف</button>
-              </div>
-            </td>
-          `;
-
-          tr.addEventListener('click', function() {
-            toggleRowSelection(String(c.id));
-          });
-
-          tbody.appendChild(tr);
-        });
-
-        // ربط الأحداث لصفحة الحالية
-        tbody.querySelectorAll('.row-checkbox').forEach(cb => {
-          cb.addEventListener('change', function(e) {
-            e.stopPropagation();
-            const id = this.getAttribute('data-id');
-            if (this.checked) selectedIds.add(id);
-            else selectedIds.delete(id);
-            renderTable();
-            updateBulkActionBar();
-          });
-        });
-
-        tbody.querySelectorAll('.status-select').forEach(sel => {
-          sel.addEventListener('change', async function() {
-            const id = this.getAttribute('data-id');
-            const targetClient = clients.find(c => String(c.id) === String(id));
-            const oldStatus = targetClient ? targetClient.status : 'غير معروف';
-            const newStatus = this.value;
-            let updateData = { status: newStatus };
-
-            if (newStatus === 'تم') {
-              updateData.contacted_at = getCurrentFormattedTimestamp();
-            }
-
-            if (supabase) {
-              const { error } = await supabase.from('clients').update(updateData).eq('id', id);
-              if (error) {
-                alert('خطأ في تحديث الحالة: ' + error.message);
-              } else {
-                logActivity(
-                  'تغيير حالة',
-                  targetClient ? targetClient.employee : 'غير محدد',
-                  targetClient ? targetClient.name : '-',
-                  `تم تغيير الحالة من [${oldStatus}] إلى [${newStatus}]`
-                );
-                fetchClientsFromCloud();
-              }
-            }
-          });
-        });
-
-        tbody.querySelectorAll('.edit-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const client = clients.find(c => String(c.id) === String(id));
-            if (client) openEditModal(client);
-          });
-        });
-
-        tbody.querySelectorAll('.del-btn').forEach(btn => {
-          btn.addEventListener('click', async function() {
-            const id = this.getAttribute('data-id');
-            const targetClient = clients.find(c => String(c.id) === String(id));
-            if (confirm('هل ترغب بالتأكيد في حذف هذا العميل من السحابة؟')) {
-              if (supabase) {
-                const { error } = await supabase.from('clients').delete().eq('id', id);
-                if (error) {
-                  alert('خطأ في الحذف: ' + error.message);
-                } else {
-                  logActivity(
-                    'حذف عميل',
-                    targetClient ? targetClient.employee : 'غير محدد',
-                    targetClient ? targetClient.name : '-',
-                    `تم حذف العميل برقم هاتف [${targetClient ? targetClient.phone : '-'}] ومبلغ [${targetClient ? targetClient.amount : 0} ج.م]`
-                  );
-                  fetchClientsFromCloud();
-                }
-              }
-            }
-          });
-        });
-      }
-
-      // رسم أزرار الصفحات الذكية
-      function renderPaginationControls(totalPages) {
-        const container = document.getElementById('paginationControls');
-        if (!container) return;
-        container.innerHTML = '';
-
-        if (totalPages <= 1) return;
-
-        // زر الصفحة السابقة
-        const prevBtn = document.createElement('button');
-        prevBtn.type = 'button';
-        prevBtn.innerText = 'السابق';
-        prevBtn.disabled = (currentPage === 1);
-        prevBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
-        prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
-        container.appendChild(prevBtn);
-
-        // إنشاء أرقام الصفحات مع اختصار (...)
-        const pages = [];
-        if (totalPages <= 7) {
-          for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-          pages.push(1);
-          if (currentPage > 3) pages.push('...');
-          const start = Math.max(2, currentPage - 1);
-          const end = Math.min(totalPages - 1, currentPage + 1);
-          for (let i = start; i <= end; i++) {
-            if (!pages.includes(i)) pages.push(i);
-          }
-          if (currentPage < totalPages - 2) pages.push('...');
-          pages.push(totalPages);
-        }
-
-        pages.forEach(p => {
-          if (p === '...') {
-            const dots = document.createElement('span');
-            dots.innerText = '...';
-            dots.className = 'px-2 py-1 text-gray-400 font-bold';
-            container.appendChild(dots);
-          } else {
-            const pageBtn = document.createElement('button');
-            pageBtn.type = 'button';
-            pageBtn.innerText = p;
-            pageBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-bold transition cursor-pointer ${p === currentPage ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`;
-            pageBtn.onclick = () => { currentPage = p; renderTable(); };
-            container.appendChild(pageBtn);
-          }
-        });
-
-        // زر الصفحة التالية
-        const nextBtn = document.createElement('button');
-        nextBtn.type = 'button';
-        nextBtn.innerText = 'التالي';
-        nextBtn.disabled = (currentPage === totalPages);
-        nextBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === totalPages ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
-        nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
-        container.appendChild(nextBtn);
-      }
-
-      function toggleRowSelection(id) {
-        if (selectedIds.has(id)) selectedIds.delete(id);
-        else selectedIds.add(id);
-        renderTable();
-        updateBulkActionBar();
-      }
-
-      function openAddModal() {
-        document.getElementById('clientForm').reset();
-        document.getElementById('editClientId').value = '';
-        document.getElementById('editContactedAt').value = '';
-        document.getElementById('clientNotes').value = '';
-        document.getElementById('modalTitle').innerText = 'إضافة عميل جديد للسحابة';
-        document.getElementById('clientModal').style.display = 'flex';
-      }
-
-      function openEditModal(client) {
-        document.getElementById('editClientId').value = client.id;
-        document.getElementById('editContactedAt').value = client.contacted_at || '';
-        document.getElementById('clientName').value = client.name || '';
-        document.getElementById('clientPhone').value = client.phone || '';
-        document.getElementById('clientAmount').value = client.amount || 0;
-        document.getElementById('clientStatus').value = client.status || 'لم يتم';
-        document.getElementById('clientEmployee').value = client.employee || '';
-        document.getElementById('clientNotes').value = client.notes || '';
-        document.getElementById('modalTitle').innerText = 'تعديل بيانات العميل';
-        document.getElementById('clientModal').style.display = 'flex';
-      }
-
-      function closeModal(id) {
-        const modal = document.getElementById(id);
-        if (modal) modal.style.display = 'none';
-      }
-
-      function renderAdminLogsTable() {
-        const tbody = document.getElementById('adminLogsTableBody');
-        const emptyEl = document.getElementById('emptyLogsState');
-        const search = (document.getElementById('logSearchInput').value || '').toLowerCase().trim();
-        const actionFilter = document.getElementById('logActionFilter').value;
-        const empFilter = document.getElementById('logEmployeeFilter').value;
-
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        const empSelect = document.getElementById('logEmployeeFilter');
-        const currentEmpVal = empSelect.value;
-        const employees = [...new Set(activityLogs.map(l => l.employee).filter(Boolean))];
-        empSelect.innerHTML = '<option value="">كل الموظفين</option>';
-        employees.forEach(emp => {
-          const opt = document.createElement('option');
-          opt.value = emp;
-          opt.innerText = emp;
-          empSelect.appendChild(opt);
-        });
-        empSelect.value = currentEmpVal;
-
-        let filtered = [...activityLogs];
-        if (actionFilter) filtered = filtered.filter(l => l.action_type === actionFilter);
-        if (empFilter) filtered = filtered.filter(l => l.employee === empFilter);
-        if (search) {
-          filtered = filtered.filter(l => 
-            (l.employee || '').toLowerCase().includes(search) || 
-            (l.client_name || '').toLowerCase().includes(search) || 
-            (l.details || '').toLowerCase().includes(search) || 
-            (l.action_type || '').toLowerCase().includes(search)
-          );
-        }
-
-        if (filtered.length === 0) {
-          emptyEl.style.display = 'block';
-        } else {
-          emptyEl.style.display = 'none';
-        }
-
-        filtered.forEach(log => {
-          const tr = document.createElement('tr');
-          tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-          tr.innerHTML = `
-            <td class="p-3 text-gray-500 font-mono text-[11px] whitespace-nowrap">${log.timestamp || '-'}</td>
-            <td class="p-3 font-bold text-gray-800">${log.employee || 'غير محدد'}</td>
-            <td class="p-3">${getActionBadge(log.action_type)}</td>
-            <td class="p-3 font-semibold text-blue-700">${log.client_name || '-'}</td>
-            <td class="p-3 text-gray-600 text-[11px] max-w-xs">${log.details || '-'}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      function openDetailedMonthlyReport() {
-        const selectPicker = document.getElementById('monthlySelectPicker');
-        selectPicker.innerHTML = '';
-
-        const monthSet = new Set();
-        const now = new Date();
-        const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        monthSet.add(currentYM);
-
-        clients.forEach(c => {
-          if (c.date && c.date.length >= 7) {
-            monthSet.add(c.date.substring(0, 7));
-          }
-        });
-
-        const sortedMonths = Array.from(monthSet).sort().reverse();
-        sortedMonths.forEach(ym => {
-          const parts = ym.split('-');
-          const y = parts[0];
-          const m = parseInt(parts[1], 10) - 1;
-          const opt = document.createElement('option');
-          opt.value = ym;
-          opt.innerText = `${arabicMonths[m] || ''} ${y}`;
-          selectPicker.appendChild(opt);
-        });
-
-        selectPicker.value = currentYM;
-        renderMonthDetails(currentYM);
-
-        selectPicker.onchange = function() {
-          renderMonthDetails(this.value);
-        };
-
-        document.getElementById('monthlyModal').style.display = 'flex';
-      }
-
-      function renderMonthDetails(targetYM) {
-        const monthClients = clients.filter(c => (c.date || '').startsWith(targetYM));
-        const total = monthClients.length;
-        const done = monthClients.filter(c => c.status === 'تم').length;
-        const noAns = monthClients.filter(c => c.status === 'لم يرد').length;
-        const pending = monthClients.filter(c => c.status === 'لم يتم').length;
-        const reminder = monthClients.filter(c => c.status === 'تذكير').length;
-        const revenue = monthClients.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-
-        const summaryCards = document.getElementById('monthlySummaryCards');
-        summaryCards.innerHTML = `
-          <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
-            <span class="text-[10px] text-gray-500 font-semibold">عملاء الشهر</span>
-            <div class="text-xl font-bold text-gray-800 mt-0.5">${total.toLocaleString('ar-EG')}</div>
-          </div>
-          <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
-            <span class="text-[10px] text-emerald-700 font-semibold">تم التواصل</span>
-            <div class="text-xl font-bold text-emerald-600 mt-0.5">${done.toLocaleString('ar-EG')}</div>
-          </div>
-          <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center">
-            <span class="text-[10px] text-amber-700 font-semibold">في الانتظار / لم يرد</span>
-            <div class="text-xl font-bold text-amber-600 mt-0.5">${(pending + noAns).toLocaleString('ar-EG')}</div>
-          </div>
-          <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
-            <span class="text-[10px] text-blue-700 font-semibold">إجمالي المحصل</span>
-            <div class="text-xl font-bold text-blue-700 mt-0.5">${revenue.toLocaleString('ar-EG')} ج.م</div>
-          </div>
-        `;
-
-        const empMap = {};
-        monthClients.forEach(c => {
-          const emp = c.employee || 'غير محدد';
-          if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
-          empMap[emp].total++;
-          if (c.status === 'تم') empMap[emp].done++;
-          else if (c.status === 'لم يرد') empMap[emp].noAnswer++;
-          else if (c.status === 'لم يتم') empMap[emp].pending++;
-          else if (c.status === 'تذكير') empMap[emp].reminder++;
-          empMap[emp].revenue += (parseFloat(c.amount) || 0);
-        });
-
-        const tbody = document.getElementById('monthlyEmployeeTableBody');
-        tbody.innerHTML = '';
-        const empKeys = Object.keys(empMap);
-
-        if (empKeys.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-400">لا توجد سجلات في هذا الشهر.</td></tr>';
-        } else {
-          empKeys.forEach(emp => {
-            const d = empMap[emp];
-            const rate = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
-            const tr = document.createElement('tr');
-            tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-            tr.innerHTML = `
-              <td class="p-2.5 font-bold text-gray-800">${emp}</td>
-              <td class="p-2.5 font-semibold text-gray-700">${d.total.toLocaleString('ar-EG')}</td>
-              <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
-              <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
-              <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
-              <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
-              <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
-            `;
-            tbody.appendChild(tr);
-          });
-        }
-      }
-
-      function startApp() {
-        initDateHeader();
-        fetchClientsFromCloud();
-        setupRealtimeListener();
-
-        // اختيار عدد العناصر لكل صفحة
-        document.getElementById('pageSizeSelect').addEventListener('change', function() {
-          pageSize = parseInt(this.value, 10) || 50;
-          currentPage = 1;
-          renderTable();
-        });
-
-        // فتح سجل الأدمن
-        document.getElementById('btnAdminHistory').addEventListener('click', function() {
-          document.getElementById('adminPinInput').value = '';
-          document.getElementById('adminPinModal').style.display = 'flex';
-          document.getElementById('adminPinInput').focus();
-        });
-
-        document.getElementById('closeAdminPinBtn').addEventListener('click', () => {
-          document.getElementById('adminPinModal').style.display = 'none';
-        });
-
-        document.getElementById('adminPinForm').addEventListener('submit', function(e) {
-          e.preventDefault();
-          const enteredPin = document.getElementById('adminPinInput').value;
-          if (enteredPin === getAdminPin()) {
-            document.getElementById('adminPinModal').style.display = 'none';
-            fetchActivityLogs();
-            document.getElementById('adminHistoryModal').style.display = 'flex';
-          } else {
-            alert('الرقم السري غير صحيح!');
-          }
-        });
-
-        document.getElementById('closeAdminHistoryBtn').addEventListener('click', () => {
-          document.getElementById('adminHistoryModal').style.display = 'none';
-        });
-
-        // تغيير الرقم السري للأدمن
-        document.getElementById('btnChangeAdminPin').addEventListener('click', function() {
-          const currentPin = prompt('أدخل الرقم السري الحالي:');
-          if (currentPin === getAdminPin()) {
-            const newPin = prompt('أدخل الرقم السري الجديد:');
-            if (newPin && newPin.trim().length >= 4) {
-              setAdminPin(newPin.trim());
-              alert('تم تحديث الرقم السري للأدمن بنجاح 🔒');
-            } else {
-              alert('يجب أن يتكون الرقم السري من 4 أرقام أو أحرف على الأقل.');
-            }
-          } else if (currentPin !== null) {
-            alert('الرقم السري الحالي غير صحيح.');
-          }
-        });
-
-        // فلاتر سجل الأدمن
-        document.getElementById('logSearchInput').addEventListener('input', renderAdminLogsTable);
-        document.getElementById('logActionFilter').addEventListener('change', renderAdminLogsTable);
-        document.getElementById('logEmployeeFilter').addEventListener('change', renderAdminLogsTable);
-
-        // تصدير سجل نشاطات الأدمن
-        document.getElementById('btnExportLogs').addEventListener('click', function() {
-          if (activityLogs.length === 0) return alert('لا توجد حركات مسجلة لتصديرها.');
-          const exportData = activityLogs.map(l => ({
-            'التوقيت والتاريخ': l.timestamp || '',
-            'اسم الموظف': l.employee || '',
-            'نوع الحركة': l.action_type || '',
-            'العميل المستهدف': l.client_name || '',
-            'التفاصيل': l.details || ''
-          }));
-          const ws = XLSX.utils.json_to_sheet(exportData);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, 'سجل_نشاطات_الموظفين');
-          XLSX.writeFile(wb, 'Admin_Audit_History.xlsx');
-        });
-
-        // التبويبات
-        document.getElementById('tab-all').addEventListener('click', () => setTab('الكل', 'tab-all'));
-        document.getElementById('tab-done').addEventListener('click', () => setTab('تم', 'tab-done'));
-        document.getElementById('tab-pending').addEventListener('click', () => setTab('لم يتم', 'tab-pending'));
-        document.getElementById('tab-noanswer').addEventListener('click', () => setTab('لم يرد', 'tab-noanswer'));
-        document.getElementById('tab-reminder').addEventListener('click', () => setTab('تذكير', 'tab-reminder'));
-
-        // بحث متجاوب مع Debounce لسرعة فائقة
-        document.getElementById('searchInput').addEventListener('input', function() {
-          clearTimeout(searchDebounceTimer);
-          searchDebounceTimer = setTimeout(() => {
-            currentPage = 1;
-            renderTable();
-          }, 200);
-        });
-
-        // Select All Checkbox (للصفحة الحالية)
-        document.getElementById('selectAllCheckbox').addEventListener('change', function() {
-          const searchInput = document.getElementById('searchInput');
-          const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
-          let filtered = clients;
-          if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
-          if (search) {
-            filtered = filtered.filter(c => 
-              (c.name && c.name.toLowerCase().includes(search)) || 
-              (c.phone && String(c.phone).includes(search)) ||
-              (c.employee && c.employee.toLowerCase().includes(search)) ||
-              (c.notes && c.notes.toLowerCase().includes(search))
-            );
-          }
-
-          const startIndex = (currentPage - 1) * pageSize;
-          const endIndex = Math.min(startIndex + pageSize, filtered.length);
-          const pageItems = filtered.slice(startIndex, endIndex);
-
-          if (this.checked) {
-            pageItems.forEach(c => selectedIds.add(String(c.id)));
-          } else {
-            pageItems.forEach(c => selectedIds.delete(String(c.id)));
-          }
-          renderTable();
-          updateBulkActionBar();
-        });
-
-        // ✅ Bulk Delete بالدفعات لتجنب حدود URL
-        document.getElementById('btnBulkDelete').addEventListener('click', async function() {
-          const count = selectedIds.size;
-          if (count === 0) return;
-
-          if (confirm(`هل أنت متأكد من حذف ${count} عميل محدد من السحابة نهائياً؟`)) {
-            if (supabase) {
-              const idsArray = Array.from(selectedIds);
-              const chunkSize = 200;
-              let hasError = false;
-
-              for (let i = 0; i < idsArray.length; i += chunkSize) {
-                const chunk = idsArray.slice(i, i + chunkSize);
-                const { error } = await supabase.from('clients').delete().in('id', chunk);
-                if (error) {
-                  hasError = true;
-                  alert('خطأ أثناء الحذف: ' + error.message);
-                  break;
-                }
-              }
-
-              if (!hasError) {
-                logActivity('حذف متعدد', 'الأدمن / الموظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
-                selectedIds.clear();
-                updateBulkActionBar();
-                fetchClientsFromCloud();
-              }
-            }
-          }
-        });
-
-        document.getElementById('btnBulkCancel').addEventListener('click', function() {
-          selectedIds.clear();
-          renderTable();
-          updateBulkActionBar();
-        });
-
-        // النوافذ
-        document.getElementById('btnAddClient').addEventListener('click', openAddModal);
-        document.getElementById('closeClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
-        document.getElementById('cancelClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
-
-        // إرسال نموذج العميل
-        document.getElementById('clientForm').addEventListener('submit', async function(e) {
-          e.preventDefault();
-          const submitBtn = document.getElementById('saveClientSubmitBtn');
-          submitBtn.disabled = true;
-          submitBtn.innerText = 'جاري الحفظ...';
-
-          const id = document.getElementById('editClientId').value;
-          const statusVal = document.getElementById('clientStatus').value;
-          let contactedAtVal = document.getElementById('editContactedAt').value;
-          const todayStr = new Date().toISOString().split('T')[0];
-
-          if (statusVal === 'تم' && !contactedAtVal) {
-            contactedAtVal = getCurrentFormattedTimestamp();
-          }
-
-          const clientPayload = {
-            name: document.getElementById('clientName').value.trim(),
-            phone: document.getElementById('clientPhone').value.trim(),
-            amount: parseFloat(document.getElementById('clientAmount').value) || 0,
-            status: statusVal,
-            employee: document.getElementById('clientEmployee').value.trim() || 'غير محدد',
-            notes: document.getElementById('clientNotes').value.trim(),
-            contacted_at: contactedAtVal,
-            date: todayStr
-          };
-
-          if (supabase) {
-            try {
-              let res;
-              if (id) {
-                res = await supabase.from('clients').update(clientPayload).eq('id', id);
-                if (!res.error) {
-                  logActivity(
-                    'تعديل بيانات',
-                    clientPayload.employee,
-                    clientPayload.name,
-                    `تم تعديل بيانات العميل (المبلغ: ${clientPayload.amount} ج.م، الحالة: ${clientPayload.status})`
-                  );
-                }
-              } else {
-                res = await supabase.from('clients').insert([clientPayload]);
-                if (!res.error) {
-                  logActivity(
-                    'إضافة عميل',
-                    clientPayload.employee,
-                    clientPayload.name,
-                    `تمت إضافة عميل جديد بمبلغ ${clientPayload.amount} ج.م وحالة [${clientPayload.status}]`
-                  );
-                }
-              }
-
-              if (res.error) {
-                alert('فشل الحفظ في السحابة: ' + res.error.message);
-              } else {
-                closeModal('clientModal');
-                fetchClientsFromCloud();
-              }
-            } catch (err) {
-              alert('خطأ في الاتصال: ' + err.message);
-            }
-          } else {
-            alert('أداة Supabase غير محملة، تأكد من الاتصال بالإنترنت.');
-          }
-
-          submitBtn.disabled = false;
-          submitBtn.innerText = 'حفظ في السحابة';
-        });
-
-        // استيراد شيت
-        document.getElementById('btnImport').addEventListener('click', () => {
-          document.getElementById('fileInput').click();
-        });
-
-        // ✅ رفع الملفات الكبيرة (10,000+ صف) على دفعات تلقائياً
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-          const file = e.target.files[0];
-          if (!file || !supabase) return;
-
-          const reader = new FileReader();
-          reader.onload = async function(evt) {
-            try {
-              const data = new Uint8Array(evt.target.result);
-              const workbook = XLSX.read(data, { type: 'array' });
-              const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-              const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-              const todayStr = new Date().toISOString().split('T')[0];
-
-              const rowsToInsert = [];
-              jsonData.forEach(row => {
-                const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
-                const phone = row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || '';
-                const amountRaw = row['المبلغ'] || row['Amount'] || 0;
-                const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
-                
-                let status = String(row['حالة التواصل'] || row['Status'] || 'لم يتم').trim();
-                let contactedAt = '';
-                if (status.includes('تم') && !status.includes('لم')) {
-                  status = 'تم';
-                  contactedAt = row['تاريخ ووقت التواصل'] || row['وقت التواصل'] || getCurrentFormattedTimestamp();
-                } else if (status.includes('لم يرد')) {
-                  status = 'لم يرد';
-                } else if (status.includes('تذكير')) {
-                  status = 'تذكير';
-                } else {
-                  status = 'لم يتم';
-                }
-
-                const employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || 'غير محدد';
-                const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
-
-                if (name || phone) {
-                  rowsToInsert.push({
-                    name: String(name || 'عميل').trim(),
-                    phone: String(phone).trim(),
-                    amount: amount,
-                    status: status,
-                    employee: String(employee).trim(),
-                    notes: String(notes).trim(),
-                    contacted_at: contactedAt,
-                    date: todayStr
-                  });
-                }
-              });
-
-              if (rowsToInsert.length > 0) {
-                const statusEl = document.getElementById('syncStatus');
-                const CHUNK_SIZE = 500;
-                const totalChunks = Math.ceil(rowsToInsert.length / CHUNK_SIZE);
-
-                for (let i = 0; i < totalChunks; i++) {
-                  const chunk = rowsToInsert.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                  if (statusEl) {
-                    statusEl.innerText = `⏳ جاري رفع الدفعة ${i + 1} من ${totalChunks}...`;
-                  }
-                  const { error } = await supabase.from('clients').insert(chunk);
-                  if (error) {
-                    throw new Error(`خطأ في الدفعة ${i + 1}: ` + error.message);
-                  }
-                }
-
-                logActivity('استيراد شيت', 'الأدمن / النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ملف شيت يحتوي على ${rowsToInsert.length} عميل جديد`);
-                alert(`تم رفع وتزامن ${rowsToInsert.length.toLocaleString('ar-EG')} عميل في السحابة بنجاح.`);
-                fetchClientsFromCloud();
-              }
-            } catch (err) {
-              alert('خطأ أثناء معالجة الملف: ' + err.message);
-            } finally {
-              e.target.value = '';
-            }
-          };
-          reader.readAsArrayBuffer(file);
-        });
-
-        // تصدير إكسل
-        document.getElementById('btnExport').addEventListener('click', function() {
-          if (clients.length === 0) return alert('لا توجد بيانات لتصديرها.');
-          const exportData = clients.map(c => ({
-            'اسم العميل': c.name || '',
-            'رقم الهاتف': c.phone || '',
-            'المبلغ المدفوع': c.amount || 0,
-            'الفئة': calculateTier(c.amount),
-            'حالة التواصل': c.status || 'لم يتم',
-            'تاريخ ووقت التواصل': c.contacted_at || '',
-            'الموظف المسؤول': c.employee || '',
-            'تاريخ الإضافة': c.date || '',
-            'الملاحظات': c.notes || ''
-          }));
-          const ws = XLSX.utils.json_to_sheet(exportData);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, 'العملاء');
-          XLSX.writeFile(wb, 'CRM_Cloud_Clients.xlsx');
-        });
-
-        // إحصائيات الموظفين الإجمالية
-        document.getElementById('btnEmployeeStats').addEventListener('click', function() {
-          const empMap = {};
-          clients.forEach(c => {
-            const emp = c.employee || 'غير محدد';
-            if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
-            empMap[emp].total++;
-            if (c.status === 'تم') empMap[emp].done++;
-            else if (c.status === 'لم يرد') empMap[emp].noAnswer++;
-            else if (c.status === 'لم يتم') empMap[emp].pending++;
-            else if (c.status === 'تذكير') empMap[emp].reminder++;
-            empMap[emp].revenue += (parseFloat(c.amount) || 0);
-          });
-
-          const tbody = document.getElementById('employeeTableBody');
-          tbody.innerHTML = '';
-          const keys = Object.keys(empMap);
-          if (keys.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-400">لا توجد بيانات موظفين مسجلة بعد.</td></tr>';
-          } else {
-            keys.forEach(emp => {
-              const d = empMap[emp];
-              const rate = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
-              const tr = document.createElement('tr');
-              tr.className = 'border-b border-gray-100 hover:bg-gray-50';
-              tr.innerHTML = `
-                <td class="p-2.5 font-bold text-gray-800">${emp}</td>
-                <td class="p-2.5">${d.total.toLocaleString('ar-EG')}</td>
-                <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
-                <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
-                <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
-                <td class="p-2.5 font-bold text-blue-500">${d.reminder.toLocaleString('ar-EG')}</td>
-                <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
-                <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
-              `;
-              tbody.appendChild(tr);
-            });
-          }
-          document.getElementById('employeeModal').style.display = 'flex';
-        });
-
-        document.getElementById('closeEmployeeModalBtn').addEventListener('click', () => closeModal('employeeModal'));
-
-        // التقرير الشهري التفصيلي
-        document.getElementById('btnMonthlyReport').addEventListener('click', openDetailedMonthlyReport);
-        document.getElementById('closeMonthlyModalBtn').addEventListener('click', () => closeModal('monthlyModal'));
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', startApp);
-      } else {
-        startApp();
-      }
-    })();
-  </script>
-</body>
-</html>
+              ${c.notes ? `<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${c.notes}
