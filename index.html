@@ -66,14 +66,11 @@
         </button>
       </div>
 
-      <!-- مؤشر حالة قسم السيدات عند فتحه -->
-      <div id="womenSectionIndicator" class="flex items-center gap-2 bg-pink-50 text-pink-700 border border-pink-200 px-3 py-1.5 rounded-xl text-xs font-bold" style="display: none;">
+      <!-- مؤشر حالة قسم السيدات (تم حظر تغيير الـ PIN منه وقصره على الأدمن) -->
+      <div id="womenSectionIndicator" class="flex items-center gap-3 bg-pink-50 text-pink-700 border border-pink-200 px-4 py-2 rounded-xl text-xs font-bold" style="display: none;">
         <span>🔐 أنتِ الآن في قسم السيدات (بيانات النساء فقط)</span>
-        <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer">
+        <button type="button" id="btnLockWomenSection" class="bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer shadow-sm">
           قفل القسم والعودة للرجالي
-        </button>
-        <button type="button" id="btnChangeWomenPin" class="text-pink-700 hover:underline text-[11px] font-semibold cursor-pointer">
-          تغيير الـ PIN
         </button>
       </div>
     </div>
@@ -182,7 +179,7 @@
           <!-- زر سجل الأدمن -->
           <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
             <span>🛡️</span>
-            <span>سجل الأدمن (History)</span>
+            <span>سجل الأدمن وإدارة الأمان</span>
           </button>
 
           <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
@@ -306,7 +303,7 @@
     </div>
   </div>
 
-  <!-- Modal: لوحة وسجل نشاطات الموظفين الكامل (Audit Log) -->
+  <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة الأرقام السرية (خاص بالأدمن فقط) -->
   <div id="adminHistoryModal" class="fixed inset-0 bg-black/70 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
       
@@ -317,14 +314,20 @@
             🛡️
           </div>
           <div>
-            <h3 class="text-base font-bold text-gray-900">سجل حركات ونشاطات الموظفين (Audit Log)</h3>
-            <p class="text-xs text-gray-500">متابعة دقيقة لكل تعديل، تغيير حالة، إضافة، أو حذف مع الوقت واسم الموظف</p>
+            <h3 class="text-base font-bold text-gray-900">سجل حركات الموظفين وإدارة الأمان (الأدمن فقط)</h3>
+            <p class="text-xs text-gray-500">متابعة دقيقة للنشاطات والتحكم الحصري في كلمات السر والأرقام السرية للأقسام</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" id="btnChangeAdminPin" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer border border-gray-200">
+        
+        <!-- أزرار إدارة الأمان والـ PIN للأدمن فقط -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="btnChangeAdminPin" class="bg-slate-800 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>🔑</span>
-            <span>تغيير كلمة السر</span>
+            <span>تغيير PIN الأدمن</span>
+          </button>
+          <button type="button" id="btnChangeWomenPinAdmin" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+            <span>🧕</span>
+            <span>تغيير PIN قسم السيدات</span>
           </button>
           <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>📥</span>
@@ -346,6 +349,7 @@
           <option value="حذف عميل">حذف عميل</option>
           <option value="حذف متعدد">حذف متعدد</option>
           <option value="استيراد شيت">استيراد شيت</option>
+          <option value="أمان وكلمات سر">أمان وكلمات سر</option>
         </select>
 
         <select id="logEmployeeFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
@@ -548,7 +552,7 @@
       let pageSize = 50;
       let searchDebounceTimer = null;
       
-      // الأرقام السرية
+      // الأرقام السرية (إدارة حصرية للأدمن)
       function getAdminPin() {
         return localStorage.getItem('crm_admin_secret_pin') || '1234';
       }
@@ -600,7 +604,7 @@
         return digits || str;
       }
 
-      // اختيار الموظف التلقائي العادل (Load Balancing على عملاء القسم الحالي)
+      // اختيار الموظف التلقائي العادل
       function getAutoAssignedEmployee() {
         const activeList = getActiveSectionClients();
         const counts = {};
@@ -693,6 +697,7 @@
           case 'حذف عميل': return '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🗑️ حذف عميل</span>';
           case 'حذف متعدد': return '<span class="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">❌ حذف متعدد</span>';
           case 'استيراد شيت': return '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">📥 استيراد شيت</span>';
+          case 'أمان وكلمات سر': return '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔒 أمان وكلمات سر</span>';
           default: return `<span class="bg-gray-100 text-gray-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${type}</span>`;
         }
       }
@@ -788,12 +793,11 @@
         }
       }
 
-      // ✅ فلترة صارمة: القسم الرجالي يعرض فقط الرجال، وقسم السيدات يعرض فقط النساء
+      // فلترة صارمة: القسم الرجالي يعرض فقط الرجال، وقسم السيدات يعرض فقط النساء
       function getActiveSectionClients() {
         if (currentSection === 'women') {
           return clients.filter(c => c.category === 'women');
         }
-        // في القسم الرجالي: يظهر فقط من هو men أو السجلات العامة السابقة التي ليست women
         return clients.filter(c => c.category === 'men' || (!c.category && c.category !== 'women') || c.category === 'general');
       }
 
@@ -1123,7 +1127,6 @@
         document.getElementById('editContactedAt').value = '';
         document.getElementById('clientNotes').value = '';
         
-        // ضبط القسم تلقائياً بحسب القسم المفتوح حالياً
         document.getElementById('clientCategory').value = currentSection;
         document.getElementById('clientEmployeeSelect').value = 'auto';
         document.getElementById('clientEmployeeCustom').style.display = 'none';
@@ -1414,21 +1417,6 @@
           switchSection('men');
         });
 
-        document.getElementById('btnChangeWomenPin').addEventListener('click', () => {
-          const cur = prompt('أدخلي الرقم السري الحالي لقسم السيدات:');
-          if (cur === getWomenPin() || cur === getAdminPin()) {
-            const next = prompt('أدخلي الرقم السري الجديد لقسم السيدات (4 أرقام على الأقل):');
-            if (next && next.trim().length >= 4) {
-              setWomenPin(next.trim());
-              alert('تم تحديث الرقم السري لقسم السيدات بنجاح 🔒');
-            } else {
-              alert('الرقم السري يجب أن يكون 4 أرقام على الأقل.');
-            }
-          } else if (cur !== null) {
-            alert('الرقم السري الحالي غير صحيح.');
-          }
-        });
-
         document.getElementById('clientEmployeeSelect').addEventListener('change', function() {
           const customInp = document.getElementById('clientEmployeeCustom');
           if (this.value === 'custom') {
@@ -1471,18 +1459,37 @@
           document.getElementById('adminHistoryModal').style.display = 'none';
         });
 
+        // ✅ تغيير الرقم السري للأدمن (متاح فقط داخل لوحة الأدمن)
         document.getElementById('btnChangeAdminPin').addEventListener('click', function() {
-          const currentPin = prompt('أدخل الرقم السري الحالي:');
+          const currentPin = prompt('أدخل الرقم السري الحالي للأدمن:');
           if (currentPin === getAdminPin()) {
-            const newPin = prompt('أدخل الرقم السري الجديد:');
+            const newPin = prompt('أدخل الرقم السري الجديد للأدمن (4 أرقام على الأقل):');
             if (newPin && newPin.trim().length >= 4) {
               setAdminPin(newPin.trim());
+              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث الرقم السري الرئيسي للأدمن');
               alert('تم تحديث الرقم السري للأدمن بنجاح 🔒');
             } else {
               alert('يجب أن يتكون الرقم السري من 4 أرقام أو أحرف على الأقل.');
             }
           } else if (currentPin !== null) {
             alert('الرقم السري الحالي غير صحيح.');
+          }
+        });
+
+        // ✅ تغيير الرقم السري لقسم السيدات (متاح حصرياً للأدمن عبر إدخال Admin PIN)
+        document.getElementById('btnChangeWomenPinAdmin').addEventListener('click', function() {
+          const adminCheck = prompt('أدخل الرقم السري الرئيسي للأدمن للموافقة على تغيير PIN قسم السيدات:');
+          if (adminCheck === getAdminPin()) {
+            const newWomenPin = prompt('أدخل الرقم السري الجديد المخصص لقسم السيدات (4 أرقام على الأقل):');
+            if (newWomenPin && newWomenPin.trim().length >= 4) {
+              setWomenPin(newWomenPin.trim());
+              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تغيير الرقم السري الخاص بقسم السيدات');
+              alert('تم تحديث الرقم السري لقسم السيدات بنجاح 🧕🔒. يرجى تزويد مسؤولة التواصل بالرقم الجديد.');
+            } else {
+              alert('الرقم السري يجب أن يكون 4 أرقام على الأقل.');
+            }
+          } else if (adminCheck !== null) {
+            alert('عذراً! لا يمكن تغيير الرقم السري إلا بواسطة الأدمن (رقم الأدمن غير صحيح).');
           }
         });
 
@@ -1668,7 +1675,7 @@
           submitBtn.innerText = 'حفظ في السحابة';
         });
 
-        // استيراد شيت مع تصنيف القسم التلقائي
+        // استيراد شيت
         document.getElementById('btnImport').addEventListener('click', () => {
           document.getElementById('fileInput').click();
         });
@@ -1715,7 +1722,6 @@
                   autoCounter++;
                 }
 
-                // تصنيف دقيق للقسم (رجالي / نسائي)
                 const categoryRaw = String(row['القسم'] || row['التصنيف'] || row['النوع'] || row['الجنس'] || '').toLowerCase();
                 let category = (currentSection === 'women') ? 'women' : 'men';
                 if (categoryRaw.includes('سيدات') || categoryRaw.includes('أنثى') || categoryRaw.includes('نساء') || categoryRaw.includes('بنات') || categoryRaw.includes('women') || categoryRaw.includes('female')) {
@@ -1781,7 +1787,7 @@
           reader.readAsArrayBuffer(file);
         });
 
-        // تصدير إكسل مخصص للقسم النشط فقط
+        // تصدير إكسل
         document.getElementById('btnExport').addEventListener('click', function() {
           const activeClients = getActiveSectionClients();
           if (activeClients.length === 0) return alert('لا توجد بيانات لتصديرها في هذا القسم.');
@@ -1804,7 +1810,7 @@
           XLSX.writeFile(wb, `${sheetName}_CRM.xlsx`);
         });
 
-        // إحصائيات الموظفين مخصصة للقسم الحالي
+        // إحصائيات الموظفين
         document.getElementById('btnEmployeeStats').addEventListener('click', function() {
           const activeClients = getActiveSectionClients();
           const empMap = {};
