@@ -54,7 +54,7 @@
         <div>
           <label class="block text-xs font-bold text-gray-700 mb-1.5">اسم المستخدم</label>
           <div class="relative">
-            <input type="text" id="loginUsername" required placeholder="مثال: admin أو men أو women" autocomplete="username"
+            <input type="text" id="loginUsername" required placeholder="أدخل اسم المستخدم" autocomplete="username"
                    class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium">
             <span class="absolute left-3 top-3.5 text-gray-400 text-sm">👤</span>
           </div>
@@ -73,23 +73,6 @@
           تسجيل الدخول للمنظومة 🚀
         </button>
       </form>
-
-      <!-- دليل الحسابات الافتراضية للمساعدة -->
-      <div class="mt-6 pt-4 border-t border-gray-100 text-[11px] text-gray-500 space-y-1.5 bg-gray-50 p-3 rounded-xl">
-        <div class="font-bold text-gray-700 mb-1 text-center">🔑 الحسابات الافتراضية للنظام:</div>
-        <div class="flex justify-between items-center">
-          <span class="font-semibold text-gray-700">👑 المدير (كامل الصلاحيات):</span>
-          <span class="font-mono bg-white px-2 py-0.5 rounded border">admin / 123</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span class="font-semibold text-blue-700">👨 موظف الرجال:</span>
-          <span class="font-mono bg-white px-2 py-0.5 rounded border">men / 111</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span class="font-semibold text-pink-700">🧕 مسؤولة السيدات:</span>
-          <span class="font-mono bg-white px-2 py-0.5 rounded border">women / 222</span>
-        </div>
-      </div>
 
     </div>
   </div>
@@ -119,7 +102,7 @@
     <!-- شريط معلومات المستخدم والتبديل بين الأقسام وتسجيل الخروج -->
     <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
       
-      <!-- أزرار الأقسام (تظهر للأدمن فقط للتبديل، أو تظهر كعنوان ثابت للموظف) -->
+      <!-- أزرار الأقسام (تظهر للأدمن فقط للتبديل) -->
       <div id="sectionSwitcherContainer" class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
         <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
           <span>👨</span>
@@ -252,7 +235,7 @@
           <!-- زر سجل الأدمن (يظهر للأدمن فقط) -->
           <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
             <span>🛡️</span>
-            <span>لوحة الأدمن وإدارة الأمان</span>
+            <span>لوحة الأدمن وإدارة الحسابات</span>
           </button>
 
           <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
@@ -340,7 +323,7 @@
 
   <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة كلمات السر لجميع الحسابات (الأدمن فقط) -->
   <div id="adminHistoryModal" class="fixed inset-0 bg-black/70 items-center justify-center p-4 z-50" style="display: none;">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[92vh] flex flex-col">
       
       <!-- Header -->
       <div class="flex flex-wrap items-center justify-between pb-4 border-b gap-3">
@@ -349,25 +332,12 @@
             🛡️
           </div>
           <div>
-            <h3 class="text-base font-bold text-gray-900">لوحة الإدارة وسجل الحركات وإدارة الحسابات</h3>
-            <p class="text-xs text-gray-500">التحكم في كلمات سر الموظفين والأدمن ومتابعة دقيقة لكل التعديلات</p>
+            <h3 class="text-base font-bold text-gray-900">لوحة الإدارة، كلمات السر وسجل الحركات</h3>
+            <p class="text-xs text-gray-500">إدارة ومزامنة كلمات سر الحسابات ومتابعة دقيقة لكافة التعديلات</p>
           </div>
         </div>
         
-        <!-- أزرار إدارة كلمات السر للأدمن -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button type="button" id="btnChangeAdminPass" class="bg-slate-800 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
-            <span>🔑</span>
-            <span>تغيير باسورد الأدمن</span>
-          </button>
-          <button type="button" id="btnChangeMenPass" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
-            <span>👨</span>
-            <span>تغيير باسورد الرجال</span>
-          </button>
-          <button type="button" id="btnChangeWomenPass" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
-            <span>🧕</span>
-            <span>تغيير باسورد السيدات</span>
-          </button>
+        <div class="flex items-center gap-2">
           <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
             <span>📥</span>
             <span>تصدير السجل</span>
@@ -376,8 +346,74 @@
         </div>
       </div>
 
+      <!-- بطاقات إدارة كلمات السر السحابية للحسابات -->
+      <div class="my-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span>🔐</span>
+            <span>كلمات السر الحالية للحسابات (تزامن سحابي فوري):</span>
+          </h4>
+          <span class="text-[11px] text-slate-500 font-medium">يمكنك نسخ أي باسورد وإرساله للموظف شخصياً</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          
+          <!-- بطاقة الأدمن -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-800">👑 حساب المدير (admin)</span>
+                <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">المدير العام</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-slate-900" id="displayAdminPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeAdminPass" class="w-full bg-slate-800 hover:bg-black text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد الأدمن
+            </button>
+          </div>
+
+          <!-- بطاقة موظف الرجال -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-blue-800">👨 حساب الرجال (men)</span>
+                <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">القسم الرجالي</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-blue-700" id="displayMenPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeMenPass" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد الرجال
+            </button>
+          </div>
+
+          <!-- بطاقة مسؤولة السيدات -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-pink-800">🧕 حساب السيدات (women)</span>
+                <span class="text-[10px] bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded font-bold">قسم السيدات</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-pink-700" id="displayWomenPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeWomenPass" class="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد السيدات
+            </button>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Filters for Logs -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
         <input type="text" id="logSearchInput" placeholder="بحث في السجل (اسم الموظف، العميل، التفاصيل)..." class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500">
         
         <select id="logActionFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
@@ -610,27 +646,52 @@
               if (item.key === 'pass_men' && item.value) cloudUsers.men.pass = String(item.value).trim();
               if (item.key === 'pass_women' && item.value) cloudUsers.women.pass = String(item.value).trim();
             });
+            renderAdminPassCards();
           }
         } catch (e) {
           console.warn("Settings cloud sync warning:", e);
         }
       }
 
-      // تحديث كلمة سر مستخدم معين في السحابة
+      // تحديث عرض كلمات المرور في لوحة الأدمن
+      function renderAdminPassCards() {
+        const displayAdmin = document.getElementById('displayAdminPass');
+        const displayMen = document.getElementById('displayMenPass');
+        const displayWomen = document.getElementById('displayWomenPass');
+
+        if (displayAdmin) displayAdmin.innerText = cloudUsers.admin.pass;
+        if (displayMen) displayMen.innerText = cloudUsers.men.pass;
+        if (displayWomen) displayWomen.innerText = cloudUsers.women.pass;
+      }
+
+      // تحديث كلمة سر مستخدم معين في السحابة مع معالجة الأخطاء
       async function updateCloudPassword(key, newPass) {
-        if (key === 'pass_admin') cloudUsers.admin.pass = String(newPass).trim();
-        if (key === 'pass_men') cloudUsers.men.pass = String(newPass).trim();
-        if (key === 'pass_women') cloudUsers.women.pass = String(newPass).trim();
+        const trimmedPass = String(newPass).trim();
+        if (key === 'pass_admin') cloudUsers.admin.pass = trimmedPass;
+        if (key === 'pass_men') cloudUsers.men.pass = trimmedPass;
+        if (key === 'pass_women') cloudUsers.women.pass = trimmedPass;
+
+        renderAdminPassCards();
 
         if (supabase) {
           try {
-            await supabase
+            const { error } = await supabase
               .from('crm_settings')
-              .upsert({ key: key, value: String(newPass).trim() }, { onConflict: 'key' });
+              .upsert({ key: key, value: trimmedPass }, { onConflict: 'key' });
+
+            if (error) {
+              console.error("Error persisting password to cloud:", error);
+              alert('⚠️ تنبيه: لم يتم حفظ كلمة المرور في السحابة بسبب خطأ: ' + error.message + '\nتأكد من إنشاء جدول crm_settings في Supabase.');
+              return false;
+            }
+            return true;
           } catch (e) {
             console.warn("Error persisting password to cloud:", e);
+            alert('⚠️ تعذر الاتصال بالسحابة لحفظ كلمة المرور: ' + e.message);
+            return false;
           }
         }
+        return true;
       }
 
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -1497,8 +1558,9 @@
           const submitBtn = document.getElementById('loginSubmitBtn');
 
           submitBtn.disabled = true;
-          submitBtn.innerText = 'جاري التحقق...';
+          submitBtn.innerText = 'جاري التحقق من السحابة...';
 
+          // جلب أحدث كلمات السر من السحابة قبل التحقق للتأكد من المزامنة
           await fetchSettingsFromCloud();
 
           let matched = null;
@@ -1568,8 +1630,10 @@
         });
 
         // فتح لوحة الأدمن (للأدمن فقط)
-        document.getElementById('btnAdminHistory').addEventListener('click', function() {
+        document.getElementById('btnAdminHistory').addEventListener('click', async function() {
           if (currentUser && currentUser.role === 'admin') {
+            await fetchSettingsFromCloud();
+            renderAdminPassCards();
             fetchActivityLogs();
             document.getElementById('adminHistoryModal').style.display = 'flex';
           } else {
@@ -1587,10 +1651,12 @@
           if (currentPin && currentPin.trim() === cloudUsers.admin.pass) {
             const newPin = prompt('أدخل كلمة المرور الجديدة لحساب الأدمن:');
             if (newPin && newPin.trim().length >= 3) {
-              await updateCloudPassword('pass_admin', newPin.trim());
-              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث كلمة مرور حساب الأدمن ومزامنتها سحابياً');
-              alert('تم تحديث كلمة مرور الأدمن ومزامنتها سحابياً بنجاح 🔒');
-            } else {
+              const success = await updateCloudPassword('pass_admin', newPin.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث كلمة مرور حساب الأدمن ومزامنتها سحابياً');
+                alert('تم تحديث كلمة مرور الأدمن ومزامنتها سحابياً بنجاح 🔒');
+              }
+            } else if (newPin !== null) {
               alert('يجب أن تتكون كلمة المرور من 3 خانات على الأقل.');
             }
           } else if (currentPin !== null) {
@@ -1604,10 +1670,12 @@
           if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
             const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لموظف الرجال (user: men):');
             if (newPass && newPass.trim().length >= 3) {
-              await updateCloudPassword('pass_men', newPass.trim());
-              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب موظف الرجال ومزامنتها');
-              alert('تم تحديث كلمة مرور حساب الرجال بنجاح 👨🔒.');
-            } else {
+              const success = await updateCloudPassword('pass_men', newPass.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب موظف الرجال ومزامنتها');
+                alert('تم تحديث كلمة مرور حساب الرجال ومزامنتها بنجاح 👨🔒.');
+              }
+            } else if (newPass !== null) {
               alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
             }
           } else if (adminCheck !== null) {
@@ -1621,10 +1689,12 @@
           if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
             const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لمسؤولة السيدات (user: women):');
             if (newPass && newPass.trim().length >= 3) {
-              await updateCloudPassword('pass_women', newPass.trim());
-              logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب مسؤولة السيدات ومزامنتها');
-              alert('تم تحديث كلمة مرور حساب السيدات بنجاح 🧕🔒.');
-            } else {
+              const success = await updateCloudPassword('pass_women', newPass.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب مسؤولة السيدات ومزامنتها');
+                alert('تم تحديث كلمة مرور حساب السيدات ومزامنتها بنجاح 🧕🔒.');
+              }
+            } else if (newPass !== null) {
               alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
             }
           } else if (adminCheck !== null) {
