@@ -380,7 +380,7 @@
             <div>
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-blue-800">👨 حساب الرجال (men)</span>
-                <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">القسم الرجالي</span>
+                <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">عبدالرحمن أبو شامة</span>
               </div>
               <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
                 <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
@@ -442,7 +442,7 @@
               <th class="p-3">المستخدم / الموظف</th>
               <th class="p-3">نوع الحركة</th>
               <th class="p-3">العميل المستهدف</th>
-              <th class="p-3">التفاصيل والتغيير</th>
+              <th class="p-3.5">التفاصيل والتغيير</th>
             </tr>
           </thead>
           <tbody id="adminLogsTableBody" class="divide-y divide-gray-100">
@@ -495,12 +495,11 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">الموظف المسؤول</label>
-          <select id="clientEmployeeSelect" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white">
-            <option value="auto">⚡ توزيع تلقائي عادل (تلقائي)</option>
-            <option value="عبدالرحمن أبو شامة">عبدالرحمن أبو شامة</option>
+          <select id="clientEmployeeSelect" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
+            <option value="عبدالرحمن أبو شامة" selected>عبدالرحمن أبو شامة</option>
+            <option value="مسؤولة قسم السيدات">مسؤولة قسم السيدات</option>
             <option value="إبراهيم البغدادي">إبراهيم البغدادي</option>
             <option value="محمد مدني">محمد مدني</option>
-            <option value="مسؤولة قسم السيدات">مسؤولة قسم السيدات</option>
             <option value="custom">+ اسم موظف آخر...</option>
           </select>
           <input type="text" id="clientEmployeeCustom" placeholder="اكتب اسم الموظف..." class="w-full border rounded-xl p-2 text-xs outline-none focus:border-blue-500 mt-1.5" style="display: none;">
@@ -609,17 +608,15 @@
         }
       }
 
-      // قائمة الموظفين للتوزيع التلقائي العادل
+      // قائمة الموظفين الافتراضية
       const DEFAULT_EMPLOYEES = [
-        "عبدالرحمن أبو شامة",
-        "إبراهيم البغدادي",
-        "محمد مدني"
+        "عبدالرحمن أبو شامة"
       ];
 
       // حسابات النظام المتزامنة سحابياً
       let cloudUsers = {
         admin: { pass: '123', role: 'admin', name: 'المدير العام (Admin)' },
-        men: { pass: '111', role: 'men', name: 'موظف القسم الرجالي' },
+        men: { pass: '111', role: 'men', name: 'عبدالرحمن أبو شامة' },
         women: { pass: '222', role: 'women', name: 'مسؤولة قسم السيدات' }
       };
 
@@ -731,29 +728,9 @@
         return digits || str;
       }
 
-      // اختيار الموظف التلقائي العادل
+      // المسؤول المباشر عن التواصل
       function getAutoAssignedEmployee() {
-        const activeList = getActiveSectionClients();
-        const counts = {};
-        DEFAULT_EMPLOYEES.forEach(emp => counts[emp] = 0);
-
-        activeList.forEach(c => {
-          if (counts[c.employee] !== undefined) {
-            counts[c.employee]++;
-          }
-        });
-
-        let chosenEmp = DEFAULT_EMPLOYEES[0];
-        let minCount = counts[chosenEmp];
-
-        for (let i = 1; i < DEFAULT_EMPLOYEES.length; i++) {
-          const emp = DEFAULT_EMPLOYEES[i];
-          if (counts[emp] < minCount) {
-            minCount = counts[emp];
-            chosenEmp = emp;
-          }
-        }
-        return chosenEmp;
+        return 'عبدالرحمن أبو شامة';
       }
 
       async function logActivity(actionType, employee, clientName, details) {
@@ -1060,7 +1037,14 @@
           const tier = calculateTier(c.amount);
           const normalizedPhone = normalizePhoneNumber(c.phone);
           const waPhone = formatWhatsAppPhone(normalizedPhone);
-          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent('مرحباً ' + c.name + '، بخصوص استفسارك معنا...')}`;
+          
+          // نص رسالة الواتساب الموحدة
+          let waMessage = `السلام عليكم و رحمة الله و بركاته\nمع حضرتك عبدالرحمن أبو شامة من قسم العلاقات العامة بالمحطات السبع`;
+          if (c.category === 'women') {
+            waMessage = `السلام عليكم و رحمة الله و بركاته\nمع حضرتك مسؤولة التواصل من قسم العلاقات العامة بالمحطات السبع`;
+          }
+          
+          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
           const isSelected = selectedIds.has(String(c.id));
 
           const tr = document.createElement('tr');
@@ -1093,7 +1077,7 @@
                 ` : ''}
               </div>
             </td>
-            <td class="p-3.5 text-xs text-gray-800 font-semibold">${c.employee || 'غير محدد'}</td>
+            <td class="p-3.5 text-xs text-gray-800 font-semibold">${c.employee || 'عبدالرحمن أبو شامة'}</td>
             <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
             <td class="p-3.5 text-xs text-gray-500 max-w-[180px] truncate" title="${c.notes || ''}">
               ${c.notes ? `<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${c.notes}</span>` : '<span class="text-gray-300">-</span>'}
@@ -1146,7 +1130,7 @@
               } else {
                 logActivity(
                   'تغيير حالة',
-                  currentUser ? currentUser.name : (targetClient ? targetClient.employee : 'غير محدد'),
+                  currentUser ? currentUser.name : (targetClient ? targetClient.employee : 'عبدالرحمن أبو شامة'),
                   targetClient ? targetClient.name : '-',
                   `تم تغيير الحالة من [${oldStatus}] إلى [${newStatus}]`
                 );
@@ -1257,7 +1241,7 @@
         document.getElementById('clientNotes').value = '';
         
         document.getElementById('clientCategory').value = currentSection;
-        document.getElementById('clientEmployeeSelect').value = 'auto';
+        document.getElementById('clientEmployeeSelect').value = 'عبدالرحمن أبو شامة';
         document.getElementById('clientEmployeeCustom').style.display = 'none';
         document.getElementById('clientEmployeeCustom').value = '';
 
@@ -1277,14 +1261,10 @@
 
         const empSel = document.getElementById('clientEmployeeSelect');
         const empCustom = document.getElementById('clientEmployeeCustom');
-        const empName = client.employee || '';
+        const empName = client.employee || 'عبدالرحمن أبو شامة';
 
-        if (DEFAULT_EMPLOYEES.includes(empName) || empName === 'مسؤولة قسم السيدات') {
+        if (empName === 'عبدالرحمن أبو شامة' || empName === 'مسؤولة قسم السيدات' || empName === 'إبراهيم البغدادي' || empName === 'محمد مدني') {
           empSel.value = empName;
-          empCustom.style.display = 'none';
-          empCustom.value = '';
-        } else if (!empName || empName === 'غير محدد') {
-          empSel.value = 'auto';
           empCustom.style.display = 'none';
           empCustom.value = '';
         } else {
@@ -1430,7 +1410,7 @@
 
         const empMap = {};
         monthClients.forEach(c => {
-          const emp = c.employee || 'غير محدد';
+          const emp = c.employee || 'عبدالرحمن أبو شامة';
           if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
           empMap[emp].total++;
           if (c.status === 'تم') empMap[emp].done++;
@@ -1514,7 +1494,7 @@
           if (switcherContainer) switcherContainer.style.display = 'flex';
           switchSection('men');
         } else if (currentUser.role === 'men') {
-          roleBadge.innerText = '👨 موظف رجال';
+          roleBadge.innerText = '👨 عبدالرحمن أبو شامة';
           roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
           if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
           if (switcherContainer) switcherContainer.style.display = 'none';
@@ -1538,14 +1518,14 @@
         await fetchSettingsFromCloud();
         setupRealtimeListener();
 
-        // فحص الجلسة المحفوظة
-        const savedSession = sessionStorage.getItem('crm_logged_user');
+        // فحص الجلسة المحفوظة في localStorage
+        const savedSession = localStorage.getItem('crm_logged_user');
         if (savedSession) {
           try {
             currentUser = JSON.parse(savedSession);
             applyUserPermissions();
           } catch (e) {
-            sessionStorage.removeItem('crm_logged_user');
+            localStorage.removeItem('crm_logged_user');
           }
         }
 
@@ -1574,7 +1554,7 @@
 
           if (matched) {
             currentUser = matched;
-            sessionStorage.setItem('crm_logged_user', JSON.stringify(currentUser));
+            localStorage.setItem('crm_logged_user', JSON.stringify(currentUser));
             logActivity('تسجيل دخول', currentUser.name, '-', 'تم تسجيل الدخول بنجاح للنظام');
             errorAlert.style.display = 'none';
             applyUserPermissions();
@@ -1590,7 +1570,7 @@
         // تسجيل الخروج
         document.getElementById('btnLogout').addEventListener('click', function() {
           if (confirm('هل ترغب بالتأكيد في تسجيل الخروج؟')) {
-            sessionStorage.removeItem('crm_logged_user');
+            localStorage.removeItem('crm_logged_user');
             currentUser = null;
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('loginPassword').value = '';
@@ -1823,13 +1803,11 @@
           const finalPhone = normalizePhoneNumber(rawPhone);
 
           const empSelectVal = document.getElementById('clientEmployeeSelect').value;
-          let assignedEmployee = '';
+          let assignedEmployee = 'عبدالرحمن أبو شامة';
 
-          if (empSelectVal === 'auto') {
-            assignedEmployee = getAutoAssignedEmployee();
-          } else if (empSelectVal === 'custom') {
-            assignedEmployee = document.getElementById('clientEmployeeCustom').value.trim() || getAutoAssignedEmployee();
-          } else {
+          if (empSelectVal === 'custom') {
+            assignedEmployee = document.getElementById('clientEmployeeCustom').value.trim() || 'عبدالرحمن أبو شامة';
+          } else if (empSelectVal) {
             assignedEmployee = empSelectVal;
           }
 
@@ -1900,7 +1878,6 @@
               const todayStr = new Date().toISOString().split('T')[0];
 
               const rowsToInsert = [];
-              let autoCounter = 0;
 
               jsonData.forEach(row => {
                 const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
@@ -1922,18 +1899,17 @@
                   status = 'لم يتم';
                 }
 
-                let employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || '';
-                if (!employee || employee.trim() === '' || employee.trim() === 'غير محدد') {
-                  employee = DEFAULT_EMPLOYEES[autoCounter % DEFAULT_EMPLOYEES.length];
-                  autoCounter++;
-                }
-
                 const categoryRaw = String(row['القسم'] || row['التصنيف'] || row['النوع'] || row['الجنس'] || '').toLowerCase();
                 let category = (currentSection === 'women') ? 'women' : 'men';
                 if (categoryRaw.includes('سيدات') || categoryRaw.includes('أنثى') || categoryRaw.includes('نساء') || categoryRaw.includes('بنات') || categoryRaw.includes('women') || categoryRaw.includes('female')) {
                   category = 'women';
                 } else if (categoryRaw.includes('رجال') || categoryRaw.includes('ذكر') || categoryRaw.includes('شباب') || categoryRaw.includes('men') || categoryRaw.includes('male')) {
                   category = 'men';
+                }
+
+                let employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || '';
+                if (!employee || employee.trim() === '' || employee.trim() === 'غير محدد') {
+                  employee = 'عبدالرحمن أبو شامة';
                 }
 
                 const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
@@ -1980,8 +1956,8 @@
                   }
                 }
 
-                logActivity('استيراد شيت', currentUser ? currentUser.name : 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد وتصنيف ${rowsToInsert.length} عميل وتوزيعهم بنجاح`);
-                alert(`تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل وتوزيعهم بالقسم بنجاح.`);
+                logActivity('استيراد شيت', currentUser ? currentUser.name : 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ${rowsToInsert.length} عميل وتعيين عبدالرحمن أبو شامة كمسؤول`);
+                alert(`تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل بنجاح.`);
                 fetchClientsFromCloud();
               }
             } catch (err) {
@@ -2005,7 +1981,7 @@
             'القسم': c.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي',
             'حالة التواصل': c.status || 'لم يتم',
             'تاريخ ووقت التواصل': c.contacted_at || '',
-            'الموظف المسؤول': c.employee || '',
+            'الموظف المسؤول': c.employee || 'عبدالرحمن أبو شامة',
             'تاريخ الإضافة': c.date || '',
             'الملاحظات': c.notes || ''
           }));
@@ -2026,7 +2002,7 @@
           });
 
           activeClients.forEach(c => {
-            const emp = c.employee || 'غير محدد';
+            const emp = c.employee || 'عبدالرحمن أبو شامة';
             if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
             empMap[emp].total++;
             if (c.status === 'تم') empMap[emp].done++;
