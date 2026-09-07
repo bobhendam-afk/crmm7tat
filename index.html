@@ -223,6 +223,20 @@
         <div class="relative">
           <select id="amountFilter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
             <option value="">كل المبالغ</option>
+            <option value="100">100 ج.م</option>
+            <option value="200">200 ج.م</option>
+            <option value="300">300 ج.م</option>
+            <option value="400">400 ج.م</option>
+            <option value="500">500 ج.م</option>
+            <option value="600">600 ج.م</option>
+            <option value="700">700 ج.م</option>
+            <option value="800">800 ج.م</option>
+            <option value="900">900 ج.م</option>
+            <option value="1000">1000 ج.م</option>
+            <option value="2000">2000 ج.م</option>
+            <option value="3000">3000 ج.م</option>
+            <option value="4000">4000 ج.م</option>
+            <option value="5000">5000 ج.م</option>
           </select>
           <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">💰</span>
         </div>
@@ -1060,23 +1074,20 @@
         }
       }
 
-      // تحديث قائمة فلتر المبالغ تلقائياً من بيانات القسم الحالي
+      // فلتر المبالغ ثابت بالقيم المطلوبة، ويعرض العملاء الذين دفعوا المبلغ المختار بالضبط
       function updateAmountFilterOptions() {
         const amountFilter = document.getElementById('amountFilter');
         if (!amountFilter) return;
 
+        const fixedAmounts = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000];
         const previousValue = amountFilter.value;
-        const amounts = [...new Set(
-          getActiveSectionClients()
-            .map(c => parseFloat(c.amount) || 0)
-        )].sort((a, b) => a - b);
 
         amountFilter.innerHTML = '<option value="">كل المبالغ</option>';
 
-        amounts.forEach(amount => {
+        fixedAmounts.forEach(amount => {
           const option = document.createElement('option');
           option.value = String(amount);
-          option.textContent = `${amount.toLocaleString('ar-EG')} ج.م`;
+          option.textContent = `${amount.toLocaleString('en-US')} ج.م`;
           amountFilter.appendChild(option);
         });
 
