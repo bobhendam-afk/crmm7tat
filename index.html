@@ -155,11 +155,11 @@
                  style="background: conic-gradient(#10b981 0deg, #e2e8f0 0deg);">
               <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
                 <span class="text-xl font-bold text-gray-800" id="heroSuccessRate">0%</span>
-                <span class="text-[10px] text-gray-400 font-medium">نسبة النجاح</span>
+                <span class="text-[10px] text-gray-400 font-medium">نسبة التواصل</span>
               </div>
             </div>
           </div>
-          <span class="text-xs text-gray-500 font-medium mt-2">من إجمالي التواصلات</span>
+          <span class="text-xs text-gray-500 font-medium mt-2" id="heroSuccessDetails">من إجمالي أرقام الشهر</span>
         </div>
 
         <!-- الحالات الأربعة والتاريخ -->
@@ -1015,40 +1015,64 @@
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+        // ================= إحصائيات الشهر الحالي فقط =================
+        // إجمالي الشهر = عدد الأرقام/العملاء المرفوعين خلال الشهر الحالي.
+        // نسبة التواصل = عدد العملاء الذين حالتهم "تم" من عملاء الشهر ÷ إجمالي عملاء الشهر.
         const currentMonthClients = activeClients.filter(c => (c.date || '').startsWith(currentYearMonth));
-        const heroEl = document.getElementById('heroMonthTotal');
-        if (heroEl) heroEl.innerText = currentMonthClients.length.toLocaleString('ar-EG');
+        const currentMonthTotal = currentMonthClients.length;
 
-        let doneCount = 0, noAnswerCount = 0, pendingCount = 0, reminderCount = 0, totalRevenue = 0;
+        let monthDoneCount = 0;
+        let monthNoAnswerCount = 0;
+        let monthPendingCount = 0;
+        let monthReminderCount = 0;
 
-        for (let i = 0; i < activeClients.length; i++) {
-          const c = activeClients[i];
-          if (c.status === 'تم') doneCount++;
-          else if (c.status === 'لم يرد') noAnswerCount++;
-          else if (c.status === 'لم يتم') pendingCount++;
-          else if (c.status === 'تذكير') reminderCount++;
-          totalRevenue += (parseFloat(c.amount) || 0);
+        for (let i = 0; i < currentMonthClients.length; i++) {
+          const c = currentMonthClients[i];
+          if (c.status === 'تم') monthDoneCount++;
+          else if (c.status === 'لم يرد') monthNoAnswerCount++;
+          else if (c.status === 'تذكير') monthReminderCount++;
+          else monthPendingCount++; // يشمل "لم يتم" وأي حالة فارغة/قديمة
         }
+
+        const heroEl = document.getElementById('heroMonthTotal');
+        if (heroEl) heroEl.innerText = currentMonthTotal.toLocaleString('ar-EG');
 
         const pDone = document.getElementById('pillDone');
         const pNo = document.getElementById('pillNoAnswer');
         const pPend = document.getElementById('pillPending');
         const pRem = document.getElementById('pillReminder');
 
-        if (pDone) pDone.innerText = doneCount.toLocaleString('ar-EG');
-        if (pNo) pNo.innerText = noAnswerCount.toLocaleString('ar-EG');
-        if (pPend) pPend.innerText = pendingCount.toLocaleString('ar-EG');
-        if (pRem) pRem.innerText = reminderCount.toLocaleString('ar-EG');
+        if (pDone) pDone.innerText = monthDoneCount.toLocaleString('ar-EG');
+        if (pNo) pNo.innerText = monthNoAnswerCount.toLocaleString('ar-EG');
+        if (pPend) pPend.innerText = monthPendingCount.toLocaleString('ar-EG');
+        if (pRem) pRem.innerText = monthReminderCount.toLocaleString('ar-EG');
 
-        const totalAttempted = doneCount + noAnswerCount + reminderCount;
-        let successRate = totalAttempted > 0 ? Math.round((doneCount / totalAttempted) * 100) : 0;
-        
+        const successRate = currentMonthTotal > 0
+          ? Math.round((monthDoneCount / currentMonthTotal) * 100)
+          : 0;
+
         const heroSucc = document.getElementById('heroSuccessRate');
         if (heroSucc) heroSucc.innerText = `${successRate}%`;
-        
+
+        const heroSuccessDetails = document.getElementById('heroSuccessDetails');
+        if (heroSuccessDetails) {
+          heroSuccessDetails.innerText = `تم التواصل مع ${monthDoneCount.toLocaleString('ar-EG')} من ${currentMonthTotal.toLocaleString('ar-EG')} عميل هذا الشهر`;
+        }
+
         const deg = (successRate / 100) * 360;
         const ring = document.getElementById('progressRing');
         if (ring) ring.style.background = `conic-gradient(#10b981 ${deg}deg, #e2e8f0 0deg)`;
+
+        // ================= بطاقات إجمالي القسم (كل الفترات) =================
+        // تظل البطاقات السفلية إجمالية كما كانت حتى لا نغير وظيفة النظام الأساسية.
+        let doneCount = 0, pendingCount = 0, totalRevenue = 0;
+
+        for (let i = 0; i < activeClients.length; i++) {
+          const c = activeClients[i];
+          if (c.status === 'تم') doneCount++;
+          else if (c.status === 'لم يتم' || !c.status) pendingCount++;
+          totalRevenue += (parseFloat(c.amount) || 0);
+        }
 
         const cardT = document.getElementById('cardTotal');
         const cardD = document.getElementById('cardDone');
