@@ -213,7 +213,7 @@
     <!-- 3. شريط البحث والتبويبات والأزرار -->
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
-      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px_220px] gap-2">
         <div class="relative">
           <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
                  class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -239,6 +239,17 @@
             <option value="5000">5000 ج.م</option>
           </select>
           <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">💰</span>
+        </div>
+
+        <div class="relative">
+          <select id="statusFilter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="">كل حالات التواصل</option>
+            <option value="تم">تم التواصل</option>
+            <option value="لم يتم">لم يتم التواصل</option>
+            <option value="لم يرد">لم يرد</option>
+            <option value="تذكير">تذكير</option>
+          </select>
+          <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">☎️</span>
         </div>
       </div>
 
@@ -1053,6 +1064,11 @@
       function setTab(tab, elementId) {
         currentTab = tab;
         currentPage = 1;
+
+        // مزامنة التبويبات مع فلتر حالة التواصل حتى لا تتعارض الفلاتر مع بعضها
+        const statusFilter = document.getElementById('statusFilter');
+        if (statusFilter) statusFilter.value = tab === 'الكل' ? '' : tab;
+
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
         const activeBtn = document.getElementById(elementId);
         if (activeBtn) activeBtn.classList.add('active-tab');
@@ -1095,18 +1111,22 @@
         amountFilter.value = stillExists ? previousValue : '';
       }
 
-      // تطبيق كل فلاتر الجدول في مكان واحد لضمان توافق البحث والمبلغ والحالة مع الـ Pagination
+      // تطبيق كل فلاتر الجدول في مكان واحد لضمان توافق البحث والمبلغ وحالة التواصل مع الـ Pagination
       function getFilteredClientsForTable() {
         const searchInput = document.getElementById('searchInput');
         const amountFilter = document.getElementById('amountFilter');
+        const statusFilter = document.getElementById('statusFilter');
 
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
         const selectedAmount = amountFilter ? amountFilter.value : '';
+        const selectedStatus = statusFilter ? statusFilter.value : '';
 
         let filtered = getActiveSectionClients();
 
-        if (currentTab !== 'الكل') {
-          filtered = filtered.filter(c => c.status === currentTab);
+        // لو المستخدم اختار حالة من الفلتر نستخدمها مباشرة، وإلا نستعمل التبويب الحالي
+        const effectiveStatus = selectedStatus || (currentTab !== 'الكل' ? currentTab : '');
+        if (effectiveStatus) {
+          filtered = filtered.filter(c => c.status === effectiveStatus);
         }
 
         if (selectedAmount !== '') {
@@ -1881,6 +1901,21 @@
           currentPage = 1;
           selectedIds.clear();
           renderTable(false);
+          updateBulkActionBar();
+        });
+
+        document.getElementById('statusFilter').addEventListener('change', function() {
+          const statusValue = this.value;
+          const tabMap = {
+            '': 'tab-all',
+            'تم': 'tab-done',
+            'لم يتم': 'tab-pending',
+            'لم يرد': 'tab-noanswer',
+            'تذكير': 'tab-reminder'
+          };
+
+          selectedIds.clear();
+          setTab(statusValue || 'الكل', tabMap[statusValue] || 'tab-all');
           updateBulkActionBar();
         });
 
