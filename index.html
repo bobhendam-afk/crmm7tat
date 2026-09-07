@@ -213,10 +213,19 @@
     <!-- 3. شريط البحث والتبويبات والأزرار -->
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
-      <div class="relative">
-        <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
-               class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-2">
+        <div class="relative">
+          <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
+                 class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+        </div>
+
+        <div class="relative">
+          <select id="amountFilter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="">كل المبالغ</option>
+          </select>
+          <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">💰</span>
+        </div>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
@@ -287,7 +296,8 @@
               <th class="p-3.5">المبلغ</th>
               <th class="p-3.5">الفئة</th>
               <th class="p-3.5">القسم</th>
-              <th class="p-3.5">حالة التواصل ووقت التسجيل</th>
+              <th class="p-3.5">حالة التواصل</th>
+              <th class="p-3.5">آخر تواصل</th>
               <th class="p-3.5">الموظف المسؤول</th>
               <th class="p-3.5">تاريخ الإضافة</th>
               <th class="p-3.5">الملاحظات</th>
@@ -473,6 +483,7 @@
       <form id="clientForm" class="space-y-3.5">
         <input type="hidden" id="editClientId" value="">
         <input type="hidden" id="editContactedAt" value="">
+        <input type="hidden" id="editOriginalStatus" value="">
         
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">اسم العميل</label>
@@ -933,6 +944,7 @@
           });
 
           updateDashboardStats();
+          updateAmountFilterOptions();
           renderTable(preserveScroll, currentScroll);
           updateBulkActionBar();
         } catch (err) {
@@ -1048,20 +1060,49 @@
         }
       }
 
-      // دالة بناء الجدول مع تثبيت مكان التمرير الدقيق
-      function renderTable(preserveScroll = false, targetScroll = 0) {
-        const scrollPosition = preserveScroll ? (targetScroll || window.scrollY) : 0;
+      // تحديث قائمة فلتر المبالغ تلقائياً من بيانات القسم الحالي
+      function updateAmountFilterOptions() {
+        const amountFilter = document.getElementById('amountFilter');
+        if (!amountFilter) return;
+
+        const previousValue = amountFilter.value;
+        const amounts = [...new Set(
+          getActiveSectionClients()
+            .map(c => parseFloat(c.amount) || 0)
+        )].sort((a, b) => a - b);
+
+        amountFilter.innerHTML = '<option value="">كل المبالغ</option>';
+
+        amounts.forEach(amount => {
+          const option = document.createElement('option');
+          option.value = String(amount);
+          option.textContent = `${amount.toLocaleString('ar-EG')} ج.م`;
+          amountFilter.appendChild(option);
+        });
+
+        const stillExists = [...amountFilter.options].some(option => option.value === previousValue);
+        amountFilter.value = stillExists ? previousValue : '';
+      }
+
+      // تطبيق كل فلاتر الجدول في مكان واحد لضمان توافق البحث والمبلغ والحالة مع الـ Pagination
+      function getFilteredClientsForTable() {
         const searchInput = document.getElementById('searchInput');
+        const amountFilter = document.getElementById('amountFilter');
+
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
-        const tbody = document.getElementById('tableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        const selectedAmount = amountFilter ? amountFilter.value : '';
 
         let filtered = getActiveSectionClients();
 
         if (currentTab !== 'الكل') {
           filtered = filtered.filter(c => c.status === currentTab);
         }
+
+        if (selectedAmount !== '') {
+          const amountValue = parseFloat(selectedAmount);
+          filtered = filtered.filter(c => (parseFloat(c.amount) || 0) === amountValue);
+        }
+
         if (search) {
           filtered = filtered.filter(c => 
             (c.name && c.name.toLowerCase().includes(search)) || 
@@ -1070,6 +1111,18 @@
             (c.notes && c.notes.toLowerCase().includes(search))
           );
         }
+
+        return filtered;
+      }
+
+      // دالة بناء الجدول مع تثبيت مكان التمرير الدقيق
+      function renderTable(preserveScroll = false, targetScroll = 0) {
+        const scrollPosition = preserveScroll ? (targetScroll || window.scrollY) : 0;
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        let filtered = getFilteredClientsForTable();
 
         const totalItems = filtered.length;
         const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -1131,20 +1184,20 @@
             <td class="p-3.5">${getTierBadge(tier)}</td>
             <td class="p-3.5">${getSectionBadge(c.category)}</td>
             <td class="p-3.5" onclick="event.stopPropagation()">
-              <div>
-                <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
-                  <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
-                  <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
-                  <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
-                  <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
-                </select>
-                ${c.status === 'تم' && c.contacted_at ? `
-                  <div class="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 w-fit">
-                    <span>🕒</span>
-                    <span>${c.contacted_at}</span>
-                  </div>
-                ` : ''}
-              </div>
+              <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
+                <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
+                <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
+                <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
+                <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
+              </select>
+            </td>
+            <td class="p-3.5 text-xs">
+              ${c.contacted_at ? `
+                <div class="text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit whitespace-nowrap">
+                  <span>🕒</span>
+                  <span>${c.contacted_at}</span>
+                </div>
+              ` : '<span class="text-gray-300">لم يتم تواصل بعد</span>'}
             </td>
             <td class="p-3.5 text-xs text-gray-800 font-semibold">${c.employee || 'عبدالرحمن أبو شامة'}</td>
             <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
@@ -1197,16 +1250,17 @@
             const newStatus = this.value;
             let updateData = { status: newStatus };
 
-            if (newStatus === 'تم') {
+            // أي محاولة تواصل فعلية تُسجل كآخر تواصل، مع الحفاظ على التاريخ السابق لو رجعت الحالة "لم يتم"
+            if (newStatus !== 'لم يتم') {
               updateData.contacted_at = getCurrentFormattedTimestamp();
-            } else {
-              updateData.contacted_at = null;
             }
 
             // تحديث فوري محلياً (Optimistic UI Update)
             if (targetClient) {
               targetClient.status = newStatus;
-              targetClient.contacted_at = updateData.contacted_at;
+              if (Object.prototype.hasOwnProperty.call(updateData, 'contacted_at')) {
+                targetClient.contacted_at = updateData.contacted_at;
+              }
               updateDashboardStats();
               
               // إعادة رسم الجدول مع تثبيت مكان التمرير في مكانه بالضبط
@@ -1329,6 +1383,7 @@
         document.getElementById('clientForm').reset();
         document.getElementById('editClientId').value = '';
         document.getElementById('editContactedAt').value = '';
+        document.getElementById('editOriginalStatus').value = '';
         document.getElementById('clientNotes').value = '';
         
         document.getElementById('clientCategory').value = currentSection;
@@ -1343,6 +1398,7 @@
       function openEditModal(client) {
         document.getElementById('editClientId').value = client.id;
         document.getElementById('editContactedAt').value = client.contacted_at || '';
+        document.getElementById('editOriginalStatus').value = client.status || 'لم يتم';
         document.getElementById('clientName').value = client.name || '';
         document.getElementById('clientPhone').value = normalizePhoneNumber(client.phone || '');
         document.getElementById('clientAmount').value = client.amount || 0;
@@ -1563,6 +1619,7 @@
         }
 
         updateDashboardStats();
+        updateAmountFilterOptions();
         renderTable(false);
         updateBulkActionBar();
       }
@@ -1809,19 +1866,15 @@
           }, 200);
         });
 
+        document.getElementById('amountFilter').addEventListener('change', function() {
+          currentPage = 1;
+          selectedIds.clear();
+          renderTable(false);
+          updateBulkActionBar();
+        });
+
         document.getElementById('selectAllCheckbox').addEventListener('change', function() {
-          const searchInput = document.getElementById('searchInput');
-          const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
-          let filtered = getActiveSectionClients();
-          if (currentTab !== 'الكل') filtered = filtered.filter(c => c.status === currentTab);
-          if (search) {
-            filtered = filtered.filter(c => 
-              (c.name && c.name.toLowerCase().includes(search)) || 
-              (c.phone && String(c.phone).includes(search)) ||
-              (c.employee && c.employee.toLowerCase().includes(search)) ||
-              (c.notes && c.notes.toLowerCase().includes(search))
-            );
-          }
+          let filtered = getFilteredClientsForTable();
 
           const startIndex = (currentPage - 1) * pageSize;
           const endIndex = Math.min(startIndex + pageSize, filtered.length);
@@ -1885,11 +1938,16 @@
 
           const id = document.getElementById('editClientId').value;
           const statusVal = document.getElementById('clientStatus').value;
+          const originalStatusVal = document.getElementById('editOriginalStatus').value;
           const categoryVal = document.getElementById('clientCategory').value || 'men';
           let contactedAtVal = document.getElementById('editContactedAt').value;
           const todayStr = new Date().toISOString().split('T')[0];
 
-          if (statusVal === 'تم' && !contactedAtVal) {
+          // عند أول تواصل أو تغيير حالة التواصل من شاشة التعديل، حدّث "آخر تواصل"
+          if (
+            statusVal !== 'لم يتم' &&
+            (!contactedAtVal || (id && originalStatusVal && originalStatusVal !== statusVal))
+          ) {
             contactedAtVal = getCurrentFormattedTimestamp();
           }
 
@@ -2003,16 +2061,20 @@
                 const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
                 
                 let status = String(row['حالة التواصل'] || row['Status'] || 'لم يتم').trim();
-                let contactedAt = '';
+                let contactedAt = row['آخر تواصل'] || row['تاريخ ووقت التواصل'] || row['وقت التواصل'] || '';
+
                 if (status.includes('تم') && !status.includes('لم')) {
                   status = 'تم';
-                  contactedAt = row['تاريخ ووقت التواصل'] || row['وقت التواصل'] || getCurrentFormattedTimestamp();
                 } else if (status.includes('لم يرد')) {
                   status = 'لم يرد';
                 } else if (status.includes('تذكير')) {
                   status = 'تذكير';
                 } else {
                   status = 'لم يتم';
+                }
+
+                if (status !== 'لم يتم' && !contactedAt) {
+                  contactedAt = getCurrentFormattedTimestamp();
                 }
 
                 const categoryRaw = String(row['القسم'] || row['التصنيف'] || row['النوع'] || row['الجنس'] || '').toLowerCase();
@@ -2108,7 +2170,7 @@
             'الفئة': calculateTier(c.amount),
             'القسم': c.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي',
             'حالة التواصل': c.status || 'لم يتم',
-            'تاريخ ووقت التواصل': c.contacted_at || '',
+            'آخر تواصل': c.contacted_at || '',
             'الموظف المسؤول': c.employee || 'عبدالرحمن أبو شامة',
             'تاريخ الإضافة': c.date || '',
             'الملاحظات': c.notes || ''
