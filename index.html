@@ -213,7 +213,7 @@
     <!-- 3. شريط البحث والتبويبات والأزرار -->
     <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
       
-      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px_220px] gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px_220px_170px] gap-2">
         <div class="relative">
           <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
                  class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -250,6 +250,17 @@
             <option value="تذكير">تذكير</option>
           </select>
           <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">☎️</span>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2 min-h-[42px]">
+          <span class="text-lg">🎯</span>
+          <div class="leading-tight">
+            <div class="flex items-baseline gap-1">
+              <span id="filteredResultsCount" class="text-xl font-extrabold text-blue-700">0</span>
+              <span class="text-xs font-bold text-blue-800">عميل</span>
+            </div>
+            <div id="filteredResultsMeta" class="text-[10px] text-blue-600 font-semibold">نتيجة مطابقة</div>
+          </div>
         </div>
       </div>
 
@@ -498,6 +509,35 @@
     </div>
   </div>
 
+  <!-- Modal: تذكير المتابعات الشهرية -->
+  <div id="monthlyFollowUpModal" class="fixed inset-0 bg-black/65 backdrop-blur-sm items-center justify-center p-4 z-[60]" style="display: none;">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-gray-100">
+      <div class="bg-gradient-to-l from-blue-700 to-indigo-700 text-white p-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-extrabold flex items-center gap-2">🔔 تذكير المتابعة الشهرية</h3>
+          <p id="monthlyFollowUpSubtitle" class="text-xs text-blue-100 mt-1">لديك عملاء حان موعد التواصل معهم من جديد.</p>
+        </div>
+        <button type="button" id="closeMonthlyFollowUpBtn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-lg cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+            <span class="text-xs text-amber-700 font-bold">مطلوب متابعة اليوم / متأخر:</span>
+            <span id="monthlyFollowUpCount" class="text-xl font-extrabold text-amber-800 mr-1">0</span>
+          </div>
+          <p class="text-[11px] text-gray-500 font-medium">المتابعة تتجدد تلقائيًا بعد شهر من تاريخ آخر تواصل.</p>
+        </div>
+
+        <div id="monthlyFollowUpList" class="space-y-2 max-h-[55vh] overflow-y-auto pl-1"></div>
+
+        <div class="mt-4 pt-4 border-t flex justify-end">
+          <button type="button" id="dismissMonthlyFollowUpBtn" class="px-5 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold cursor-pointer">تمام، هتابعهم</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: إضافة / تعديل عميل -->
   <div id="clientModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
@@ -674,6 +714,7 @@
       let currentPage = 1;
       let pageSize = 50;
       let searchDebounceTimer = null;
+      let followUpPopupShownForSession = false;
 
       // جلب كلمات السر المحدثة من السحابة لتعمل على كل الأجهزة
       async function fetchSettingsFromCloud() {
@@ -972,6 +1013,7 @@
           updateAmountFilterOptions();
           renderTable(preserveScroll, currentScroll);
           updateBulkActionBar();
+          maybeShowMonthlyFollowUpPopup();
         } catch (err) {
           console.error("Fetch error:", err);
           if (statusEl) {
@@ -1000,6 +1042,210 @@
         } catch (e) {
           console.warn("Realtime error:", e);
         }
+      }
+
+      // تحويل الأرقام العربية/الفارسية لأرقام إنجليزية لتسهيل قراءة تواريخ آخر تواصل
+      function normalizeDateDigits(value) {
+        return String(value ?? '')
+          .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+          .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+          .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+          .trim();
+      }
+
+      // قراءة تاريخ "آخر تواصل" سواء كان بالتنسيق العربي الحالي أو ISO أو تاريخ رقمي/Excel
+      function parseContactedAt(value) {
+        if (value === null || value === undefined || value === '') return null;
+
+        if (value instanceof Date && !isNaN(value.getTime())) return new Date(value.getTime());
+
+        if (typeof value === 'number' && isFinite(value)) {
+          if (value > 20000 && value < 100000) {
+            const excelDate = new Date(Math.round((value - 25569) * 86400 * 1000));
+            if (!isNaN(excelDate.getTime())) return excelDate;
+          }
+          const numericDate = new Date(value);
+          if (!isNaN(numericDate.getTime())) return numericDate;
+        }
+
+        const raw = normalizeDateDigits(value).replace(/،/g, ',');
+        if (!raw) return null;
+
+        const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+        if (isoMatch) {
+          return new Date(
+            Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]),
+            Number(isoMatch[4] || 0), Number(isoMatch[5] || 0), Number(isoMatch[6] || 0)
+          );
+        }
+
+        const numericMatch = raw.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/);
+        if (numericMatch) {
+          return new Date(Number(numericMatch[3]), Number(numericMatch[2]) - 1, Number(numericMatch[1]));
+        }
+
+        const months = {
+          'يناير': 0, 'فبراير': 1, 'مارس': 2, 'أبريل': 3, 'ابريل': 3,
+          'مايو': 4, 'يونيو': 5, 'يوليو': 6, 'أغسطس': 7, 'اغسطس': 7,
+          'سبتمبر': 8, 'أكتوبر': 9, 'اكتوبر': 9, 'نوفمبر': 10, 'ديسمبر': 11
+        };
+
+        const monthNames = Object.keys(months).join('|');
+        const arabicDateMatch = raw.match(new RegExp('(\\d{1,2})\\s+(' + monthNames + ')\\s+(\\d{4})'));
+        if (arabicDateMatch) {
+          let hours = 0, minutes = 0, seconds = 0;
+          const timeMatch = raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(ص|م|AM|PM|am|pm)?/);
+          if (timeMatch) {
+            hours = Number(timeMatch[1] || 0);
+            minutes = Number(timeMatch[2] || 0);
+            seconds = Number(timeMatch[3] || 0);
+            const meridiem = timeMatch[4] || '';
+            if ((meridiem === 'م' || /^pm$/i.test(meridiem)) && hours < 12) hours += 12;
+            if ((meridiem === 'ص' || /^am$/i.test(meridiem)) && hours === 12) hours = 0;
+          }
+          return new Date(
+            Number(arabicDateMatch[3]), months[arabicDateMatch[2]], Number(arabicDateMatch[1]),
+            hours, minutes, seconds
+          );
+        }
+
+        const fallback = new Date(raw);
+        return isNaN(fallback.getTime()) ? null : fallback;
+      }
+
+      function addOneMonthClamped(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const day = date.getDate();
+        const lastDayOfTargetMonth = new Date(year, month + 2, 0).getDate();
+        const result = new Date(year, month + 1, Math.min(day, lastDayOfTargetMonth));
+        result.setHours(0, 0, 0, 0);
+        return result;
+      }
+
+      function formatShortArabicDate(date) {
+        if (!date || isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      function getMonthlyFollowUpsDue() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return getActiveSectionClients()
+          .filter(c => c && c.status === 'تم' && c.contacted_at)
+          .map(c => {
+            const lastContact = parseContactedAt(c.contacted_at);
+            if (!lastContact) return null;
+            const dueDate = addOneMonthClamped(lastContact);
+            const overdueDays = Math.max(0, Math.floor((today - dueDate) / 86400000));
+            return { client: c, lastContact, dueDate, overdueDays };
+          })
+          .filter(item => item && item.dueDate <= today)
+          .sort((a, b) => a.dueDate - b.dueDate);
+      }
+
+      function closeMonthlyFollowUpPopup() {
+        const modal = document.getElementById('monthlyFollowUpModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      function renderMonthlyFollowUpPopup() {
+        const modal = document.getElementById('monthlyFollowUpModal');
+        const list = document.getElementById('monthlyFollowUpList');
+        const countEl = document.getElementById('monthlyFollowUpCount');
+        const subtitle = document.getElementById('monthlyFollowUpSubtitle');
+        if (!modal || !list || !countEl) return;
+
+        const dueItems = getMonthlyFollowUpsDue();
+        if (dueItems.length === 0) {
+          closeMonthlyFollowUpPopup();
+          return;
+        }
+
+        countEl.innerText = dueItems.length.toLocaleString('ar-EG');
+        if (subtitle) subtitle.innerText = `عندك ${dueItems.length.toLocaleString('ar-EG')} عميل حان موعد المتابعة الشهرية معاهم.`;
+        list.innerHTML = '';
+
+        dueItems.forEach(item => {
+          const c = item.client;
+          const normalizedPhone = normalizePhoneNumber(c.phone);
+          const waPhone = formatWhatsAppPhone(normalizedPhone);
+          const waMessage = `السلام عليكم و رحمة الله و بركاته\nمتابعة شهرية من قسم العلاقات العامة بالمحطات السبع`;
+          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
+          const dueText = item.overdueDays > 0
+            ? `متأخر ${item.overdueDays.toLocaleString('ar-EG')} يوم`
+            : 'موعد المتابعة اليوم';
+
+          const card = document.createElement('div');
+          card.className = 'border border-gray-200 rounded-2xl p-3.5 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-3';
+          card.innerHTML = `
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-extrabold text-gray-900">${c.name || 'عميل'}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${item.overdueDays > 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${dueText}</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <span>📞 ${normalizedPhone || '-'}</span>
+                <span>آخر تواصل: ${formatShortArabicDate(item.lastContact)}</span>
+                <span>موعد المتابعة: ${formatShortArabicDate(item.dueDate)}</span>
+                <span>الموظف: ${c.employee || '-'}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <a href="${waLink}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">💬 واتساب</a>
+              <button type="button" data-followup-done="${c.id}" class="followup-done-btn bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer">✓ تم التواصل الآن</button>
+            </div>`;
+          list.appendChild(card);
+        });
+
+        list.querySelectorAll('.followup-done-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-followup-done');
+            const targetClient = clients.find(c => String(c.id) === String(id));
+            if (!targetClient) return;
+
+            const newContactedAt = getCurrentFormattedTimestamp();
+            this.disabled = true;
+            this.innerText = 'جاري الحفظ...';
+
+            targetClient.status = 'تم';
+            targetClient.contacted_at = newContactedAt;
+            updateDashboardStats();
+            renderTable(false);
+
+            if (supabase) {
+              const { error } = await supabase
+                .from('clients')
+                .update({ status: 'تم', contacted_at: newContactedAt })
+                .eq('id', id);
+
+              if (error) {
+                alert('تعذر تحديث آخر تواصل: ' + error.message);
+                await fetchClientsFromCloud(true);
+                return;
+              }
+
+              logActivity(
+                'تغيير حالة',
+                currentUser ? currentUser.name : (targetClient.employee || 'موظف'),
+                targetClient.name || '-',
+                'تم تسجيل متابعة شهرية جديدة وتحديث تاريخ آخر تواصل'
+              );
+            }
+
+            renderMonthlyFollowUpPopup();
+          });
+        });
+
+        modal.style.display = 'flex';
+      }
+
+      function maybeShowMonthlyFollowUpPopup() {
+        if (followUpPopupShownForSession || !currentUser) return;
+        if (currentUser.role === 'admin') return;
+        followUpPopupShownForSession = true;
+        renderMonthlyFollowUpPopup();
       }
 
       // فلترة صارمة حسب القسم المفتوح
@@ -1167,6 +1413,16 @@
           );
         }
 
+        // ترتيب الجدول تلقائيًا حسب آخر تواصل: الأحدث أولًا، ومن لم يتم التواصل معه يظهر في النهاية.
+        filtered.sort((a, b) => {
+          const dateA = parseContactedAt(a.contacted_at);
+          const dateB = parseContactedAt(b.contacted_at);
+          const timeA = dateA ? dateA.getTime() : 0;
+          const timeB = dateB ? dateB.getTime() : 0;
+          if (timeA !== timeB) return timeB - timeA;
+          return (Number(b.id) || 0) - (Number(a.id) || 0);
+        });
+
         return filtered;
       }
 
@@ -1180,6 +1436,16 @@
         let filtered = getFilteredClientsForTable();
 
         const totalItems = filtered.length;
+
+        // عداد النتائج يتغير فورًا مع أي فلتر أو بحث
+        const filteredResultsCount = document.getElementById('filteredResultsCount');
+        const filteredResultsMeta = document.getElementById('filteredResultsMeta');
+        if (filteredResultsCount) filteredResultsCount.innerText = totalItems.toLocaleString('ar-EG');
+        if (filteredResultsMeta) {
+          const sectionTotal = getActiveSectionClients().length;
+          filteredResultsMeta.innerText = `مطابق من أصل ${sectionTotal.toLocaleString('ar-EG')}`;
+        }
+
         const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
         if (currentPage > totalPages) currentPage = totalPages;
 
@@ -1756,6 +2022,7 @@
           }
 
           if (matched) {
+            followUpPopupShownForSession = false;
             currentUser = matched;
             localStorage.setItem('crm_logged_user', JSON.stringify(currentUser));
             logActivity('تسجيل دخول', currentUser.name, '-', 'تم تسجيل الدخول بنجاح للنظام');
@@ -1774,12 +2041,26 @@
         document.getElementById('btnLogout').addEventListener('click', function() {
           if (confirm('هل ترغب بالتأكيد في تسجيل الخروج؟')) {
             localStorage.removeItem('crm_logged_user');
+            followUpPopupShownForSession = false;
+            closeMonthlyFollowUpPopup();
             currentUser = null;
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('loginPassword').value = '';
             document.getElementById('loginScreen').style.display = 'flex';
           }
         });
+
+        const closeMonthlyFollowUpBtn = document.getElementById('closeMonthlyFollowUpBtn');
+        const dismissMonthlyFollowUpBtn = document.getElementById('dismissMonthlyFollowUpBtn');
+        const monthlyFollowUpModal = document.getElementById('monthlyFollowUpModal');
+
+        if (closeMonthlyFollowUpBtn) closeMonthlyFollowUpBtn.addEventListener('click', closeMonthlyFollowUpPopup);
+        if (dismissMonthlyFollowUpBtn) dismissMonthlyFollowUpBtn.addEventListener('click', closeMonthlyFollowUpPopup);
+        if (monthlyFollowUpModal) {
+          monthlyFollowUpModal.addEventListener('click', function(e) {
+            if (e.target === monthlyFollowUpModal) closeMonthlyFollowUpPopup();
+          });
+        }
 
         const phoneInput = document.getElementById('clientPhone');
         if (phoneInput) {
