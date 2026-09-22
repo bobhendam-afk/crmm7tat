@@ -112,6 +112,10 @@
           <span>🧕</span>
           <span>قسم السيدات</span>
         </button>
+        <button type="button" id="sectionVipBtn" class="section-btn px-5 py-2 rounded-lg text-xs font-bold text-amber-700 transition flex items-center gap-2 cursor-pointer hover:text-amber-900" style="display: none;">
+          <span>⭐</span>
+          <span>قسم VIP</span>
+        </button>
       </div>
 
       <!-- معلومات الحساب النشط حالياً وزر تسجيل الخروج -->
@@ -131,6 +135,7 @@
 
     </div>
 
+    <div id="standardCRMSection" class="space-y-5">
     <!-- 1. قسم إحصائيات الشهر الحالي -->
     <div class="bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm" id="heroStatsContainer">
       <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
@@ -370,6 +375,92 @@
       </div>
 
     </div>
+    </div><!-- /standardCRMSection -->
+
+    <!-- ================= قسم VIP ================= -->
+    <div id="vipCRMSection" class="space-y-5" style="display: none;">
+      <input type="file" id="vipFileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+
+      <div class="bg-gradient-to-l from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">⭐</span>
+              <h2 class="text-xl font-extrabold text-amber-900">قسم VIP</h2>
+              <span id="vipSyncStatus" class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">خاص بالإدارة والمستخدم المصرح</span>
+            </div>
+            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب وحالة الدعم.</p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
+              <div id="vipTotalClients" class="text-2xl font-extrabold text-amber-900">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">إجمالي VIP</div>
+            </div>
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
+              <div id="vipWhatsAppDone" class="text-2xl font-extrabold text-emerald-600">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">تم واتساب</div>
+            </div>
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px] col-span-2 sm:col-span-1">
+              <div id="vipTotalRevenue" class="text-2xl font-extrabold text-blue-700">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">إجمالي المبالغ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vipSetupNotice" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-xs font-bold" style="display:none;"></div>
+
+      <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_200px_150px] gap-2">
+          <div class="relative">
+            <input type="text" id="vipSearchInput" placeholder="بحث في VIP بالاسم أو الرقم..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+          </div>
+          <select id="vipWhatsAppFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+            <option value="">كل حالات واتساب</option>
+          </select>
+          <select id="vipSupportFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+            <option value="">كل حالات الدعم</option>
+          </select>
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2">
+            <span>🎯</span>
+            <span id="vipFilteredCount" class="text-xl font-extrabold text-amber-900">0</span>
+            <span class="text-xs font-bold text-amber-800">نتيجة</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="text-xs text-gray-500 font-semibold">
+            أعمدة الشيت المدعومة: <span class="font-bold text-gray-700">الاسم، الرقم، التواصل واتس اب، حالة الدعم، المبلغ</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع شيت VIP</button>
+            <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-sm">
+            <thead class="bg-amber-50 text-amber-950 text-xs font-bold">
+              <tr>
+                <th class="p-3.5">#</th>
+                <th class="p-3.5">الاسم</th>
+                <th class="p-3.5">الرقم</th>
+                <th class="p-3.5">التواصل واتس اب</th>
+                <th class="p-3.5">حالة الدعم</th>
+                <th class="p-3.5">المبلغ</th>
+                <th class="p-3.5">تاريخ الإضافة</th>
+                <th class="p-3.5 text-center">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="vipTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div id="vipEmptyState" class="text-center py-12 text-gray-400" style="display:none;">لا توجد بيانات VIP مطابقة.</div>
+      </div>
+    </div>
 
   </div>
 
@@ -408,7 +499,7 @@
           <span class="text-[11px] text-slate-500 font-medium">يمكنك نسخ أي باسورد وإرساله للموظف شخصياً</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           
           <!-- بطاقة الأدمن -->
           <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
@@ -459,6 +550,24 @@
             <button type="button" id="btnChangeWomenPass" class="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
               ✏️ تعديل باسورد السيدات
             </button>
+          </div>
+
+          <!-- بطاقة حساب VIP -->
+          <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900">⭐ حساب قسم VIP</span>
+              <label class="flex items-center gap-1 text-[10px] font-bold text-amber-800 cursor-pointer">
+                <input type="checkbox" id="vipEnabledInput" class="accent-amber-500">
+                مفعل
+              </label>
+            </div>
+            <input type="text" id="vipDisplayNameInput" placeholder="اسم الشخص الظاهر" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500">
+            <input type="text" id="vipUsernameInput" placeholder="اسم المستخدم للدخول" dir="ltr" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500 text-left">
+            <input type="text" id="vipPasswordInput" placeholder="كلمة المرور" dir="ltr" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500 text-left font-mono">
+            <button type="button" id="btnSaveVipUser" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 rounded-lg transition cursor-pointer">
+              💾 حفظ / تعديل حساب VIP
+            </button>
+            <p class="text-[9px] text-amber-800/70 leading-relaxed">هذا الحساب يرى قسم VIP فقط. الأدمن يقدر يدخل القسم من زر VIP أعلى المنصة.</p>
           </div>
 
         </div>
@@ -700,15 +809,17 @@
       let cloudUsers = {
         admin: { pass: '123', role: 'admin', name: 'المدير العام (Admin)' },
         men: { pass: '111', role: 'men', name: 'عبدالرحمن أبو شامة' },
-        women: { pass: '222', role: 'women', name: 'مسؤولة قسم السيدات' }
+        women: { pass: '222', role: 'women', name: 'مسؤولة قسم السيدات' },
+        vip: { username: '', pass: '', role: 'vip', name: 'مستخدم VIP', enabled: false }
       };
 
       let currentUser = null;
       let clients = [];
+      let vipClients = [];
       let activityLogs = [];
       let selectedIds = new Set();
       let currentTab = 'الكل';
-      let currentSection = 'men'; // 'men' | 'women'
+      let currentSection = 'men'; // 'men' | 'women' | 'vip'
 
       // متغيرات إدارة الصفحات
       let currentPage = 1;
@@ -726,6 +837,10 @@
               if (item.key === 'pass_admin' && item.value) cloudUsers.admin.pass = String(item.value).trim();
               if (item.key === 'pass_men' && item.value) cloudUsers.men.pass = String(item.value).trim();
               if (item.key === 'pass_women' && item.value) cloudUsers.women.pass = String(item.value).trim();
+              if (item.key === 'vip_username') cloudUsers.vip.username = String(item.value || '').trim().toLowerCase();
+              if (item.key === 'vip_name') cloudUsers.vip.name = String(item.value || 'مستخدم VIP').trim() || 'مستخدم VIP';
+              if (item.key === 'pass_vip') cloudUsers.vip.pass = String(item.value || '').trim();
+              if (item.key === 'vip_enabled') cloudUsers.vip.enabled = String(item.value).toLowerCase() === 'true';
             });
             renderAdminPassCards();
           }
@@ -739,10 +854,18 @@
         const displayAdmin = document.getElementById('displayAdminPass');
         const displayMen = document.getElementById('displayMenPass');
         const displayWomen = document.getElementById('displayWomenPass');
+        const vipUsernameInput = document.getElementById('vipUsernameInput');
+        const vipDisplayNameInput = document.getElementById('vipDisplayNameInput');
+        const vipPasswordInput = document.getElementById('vipPasswordInput');
+        const vipEnabledInput = document.getElementById('vipEnabledInput');
 
         if (displayAdmin) displayAdmin.innerText = cloudUsers.admin.pass;
         if (displayMen) displayMen.innerText = cloudUsers.men.pass;
         if (displayWomen) displayWomen.innerText = cloudUsers.women.pass;
+        if (vipUsernameInput) vipUsernameInput.value = cloudUsers.vip.username || '';
+        if (vipDisplayNameInput) vipDisplayNameInput.value = cloudUsers.vip.name || '';
+        if (vipPasswordInput) vipPasswordInput.value = cloudUsers.vip.pass || '';
+        if (vipEnabledInput) vipEnabledInput.checked = !!cloudUsers.vip.enabled;
       }
 
       // تحديث كلمة سر مستخدم معين في السحابة مع معالجة الأخطاء
@@ -773,6 +896,78 @@
           }
         }
         return true;
+      }
+
+
+      // حفظ / تعديل حساب VIP من لوحة الأدمن
+      async function saveVipUserSettings() {
+        if (!supabase) {
+          alert('تعذر الاتصال بقاعدة البيانات.');
+          return false;
+        }
+
+        const usernameEl = document.getElementById('vipUsernameInput');
+        const nameEl = document.getElementById('vipDisplayNameInput');
+        const passEl = document.getElementById('vipPasswordInput');
+        const enabledEl = document.getElementById('vipEnabledInput');
+
+        const username = String(usernameEl ? usernameEl.value : '').trim().toLowerCase();
+        const displayName = String(nameEl ? nameEl.value : '').trim();
+        const password = String(passEl ? passEl.value : '').trim();
+        const enabled = !!(enabledEl && enabledEl.checked);
+
+        if (enabled && (!username || !displayName || password.length < 3)) {
+          alert('لتفعيل حساب VIP لازم تدخل الاسم الظاهر واسم المستخدم وكلمة مرور 3 خانات على الأقل.');
+          return false;
+        }
+
+        try {
+          const settingsRows = [
+            { key: 'vip_username', value: username },
+            { key: 'vip_name', value: displayName || 'مستخدم VIP' },
+            { key: 'pass_vip', value: password },
+            { key: 'vip_enabled', value: enabled ? 'true' : 'false' }
+          ];
+
+          const { error } = await supabase
+            .from('crm_settings')
+            .upsert(settingsRows, { onConflict: 'key' });
+
+          if (error) throw error;
+
+          cloudUsers.vip.username = username;
+          cloudUsers.vip.name = displayName || 'مستخدم VIP';
+          cloudUsers.vip.pass = password;
+          cloudUsers.vip.enabled = enabled;
+
+          renderAdminPassCards();
+          logActivity(
+            'أمان وكلمات سر',
+            currentUser ? currentUser.name : 'الأدمن',
+            'حساب VIP',
+            enabled ? `تم حفظ/تحديث حساب VIP باسم المستخدم ${username}` : 'تم تعطيل حساب VIP'
+          );
+
+          alert(enabled ? 'تم حفظ وتفعيل حساب VIP بنجاح ⭐' : 'تم حفظ البيانات وتعطيل حساب VIP.');
+          return true;
+        } catch (e) {
+          console.error('VIP user settings error:', e);
+          alert('تعذر حفظ حساب VIP: ' + (e.message || e));
+          return false;
+        }
+      }
+
+      function canAccessVip() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'vip'));
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
       }
 
       const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -960,6 +1155,364 @@
         return cleaned;
       }
 
+      function buildVipStatusOptions(currentValue, commonValues) {
+        const current = String(currentValue || '').trim();
+        const values = [];
+        if (current) values.push(current);
+        commonValues.forEach(v => {
+          if (!values.includes(v)) values.push(v);
+        });
+        return values.map(v => `<option value="${escapeHtml(v)}" ${v === current ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+      }
+
+      function refreshVipFilterOptions() {
+        const whatsappFilter = document.getElementById('vipWhatsAppFilter');
+        const supportFilter = document.getElementById('vipSupportFilter');
+        if (!whatsappFilter || !supportFilter) return;
+
+        const currentWhats = whatsappFilter.value;
+        const currentSupport = supportFilter.value;
+
+        const whatsappValues = [...new Set(vipClients.map(c => String(c.whatsapp_status || '').trim()).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'ar'));
+        const supportValues = [...new Set(vipClients.map(c => String(c.support_status || '').trim()).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'ar'));
+
+        whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
+          whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        supportFilter.innerHTML = '<option value="">كل حالات الدعم</option>' +
+          supportValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+        if (whatsappValues.includes(currentWhats)) whatsappFilter.value = currentWhats;
+        if (supportValues.includes(currentSupport)) supportFilter.value = currentSupport;
+      }
+
+      function updateVipDashboard() {
+        const totalEl = document.getElementById('vipTotalClients');
+        const doneEl = document.getElementById('vipWhatsAppDone');
+        const revenueEl = document.getElementById('vipTotalRevenue');
+
+        const doneCount = vipClients.filter(c => {
+          const s = String(c.whatsapp_status || '').trim();
+          return s.includes('تم') && !s.includes('لم');
+        }).length;
+        const revenue = vipClients.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+
+        if (totalEl) totalEl.innerText = vipClients.length.toLocaleString('ar-EG');
+        if (doneEl) doneEl.innerText = doneCount.toLocaleString('ar-EG');
+        if (revenueEl) revenueEl.innerText = `${revenue.toLocaleString('ar-EG')} ج.م`;
+      }
+
+      function getFilteredVipClients() {
+        const searchEl = document.getElementById('vipSearchInput');
+        const whatsappEl = document.getElementById('vipWhatsAppFilter');
+        const supportEl = document.getElementById('vipSupportFilter');
+
+        const search = String(searchEl ? searchEl.value : '').trim().toLowerCase();
+        const whatsapp = String(whatsappEl ? whatsappEl.value : '').trim();
+        const support = String(supportEl ? supportEl.value : '').trim();
+
+        return [...vipClients]
+          .filter(c => {
+            if (search) {
+              const haystack = `${c.name || ''} ${c.phone || ''} ${c.whatsapp_status || ''} ${c.support_status || ''}`.toLowerCase();
+              if (!haystack.includes(search)) return false;
+            }
+            if (whatsapp && String(c.whatsapp_status || '') !== whatsapp) return false;
+            if (support && String(c.support_status || '') !== support) return false;
+            return true;
+          })
+          .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+      }
+
+      function renderVipTable() {
+        const tbody = document.getElementById('vipTableBody');
+        const emptyState = document.getElementById('vipEmptyState');
+        const countEl = document.getElementById('vipFilteredCount');
+        if (!tbody) return;
+
+        const data = getFilteredVipClients();
+        tbody.innerHTML = '';
+        if (countEl) countEl.innerText = data.length.toLocaleString('ar-EG');
+
+        if (emptyState) emptyState.style.display = data.length === 0 ? 'block' : 'none';
+
+        data.forEach((c, index) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-amber-50/40 transition';
+          const phone = normalizePhoneNumber(c.phone || '');
+          const waPhone = formatWhatsAppPhone(phone);
+          const whatsOptions = buildVipStatusOptions(c.whatsapp_status || 'لم يتم', ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
+          const supportOptions = buildVipStatusOptions(c.support_status || 'جديد', ['جديد', 'قيد المتابعة', 'تم الدعم', 'مغلق']);
+
+          tr.innerHTML = `
+            <td class="p-3.5 text-gray-500 font-semibold">${index + 1}</td>
+            <td class="p-3.5 font-bold text-gray-900">${escapeHtml(c.name || 'عميل VIP')}</td>
+            <td class="p-3.5">
+              <div class="flex items-center gap-2">
+                <span dir="ltr" class="font-mono text-xs font-bold text-gray-700">${escapeHtml(phone)}</span>
+                ${waPhone ? `<a href="https://wa.me/${encodeURIComponent(waPhone)}" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded-lg font-bold hover:bg-emerald-100">واتساب</a>` : ''}
+              </div>
+            </td>
+            <td class="p-3.5">
+              <select class="vip-whatsapp-status border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold bg-white outline-none focus:border-amber-500" data-id="${escapeHtml(c.id)}">
+                ${whatsOptions}
+              </select>
+            </td>
+            <td class="p-3.5">
+              <select class="vip-support-status border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold bg-white outline-none focus:border-amber-500" data-id="${escapeHtml(c.id)}">
+                ${supportOptions}
+              </select>
+            </td>
+            <td class="p-3.5 font-extrabold text-blue-700">${(parseFloat(c.amount) || 0).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5 text-xs text-gray-500 font-semibold">${escapeHtml(c.date || '-')}</td>
+            <td class="p-3.5 text-center">
+              ${currentUser && currentUser.role === 'admin'
+                ? `<button type="button" class="vip-delete-btn text-[11px] bg-red-50 text-red-700 border border-red-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-red-100" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name || 'عميل VIP')}">حذف</button>`
+                : '<span class="text-[10px] text-gray-400">إدارة الحالة متاحة</span>'}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.vip-whatsapp-status').forEach(el => {
+          el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'whatsapp_status', el.value));
+        });
+        tbody.querySelectorAll('.vip-support-status').forEach(el => {
+          el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'support_status', el.value));
+        });
+        tbody.querySelectorAll('.vip-delete-btn').forEach(el => {
+          el.addEventListener('click', () => deleteVipClient(el.dataset.id, el.dataset.name));
+        });
+      }
+
+      async function updateVipClientField(id, field, value) {
+        if (!supabase || !canAccessVip()) return;
+        if (!['whatsapp_status', 'support_status'].includes(field)) return;
+
+        const oldClient = vipClients.find(c => String(c.id) === String(id));
+        if (!oldClient) return;
+
+        const oldValue = oldClient[field] || '';
+        oldClient[field] = value;
+        renderVipTable();
+        updateVipDashboard();
+        refreshVipFilterOptions();
+
+        try {
+          const payload = { [field]: value, updated_at: new Date().toISOString() };
+          const { error } = await supabase.from('vip_clients').update(payload).eq('id', id);
+          if (error) throw error;
+
+          logActivity(
+            'VIP تعديل',
+            currentUser ? currentUser.name : 'مستخدم VIP',
+            oldClient.name || 'عميل VIP',
+            `${field === 'whatsapp_status' ? 'حالة واتساب' : 'حالة الدعم'}: ${oldValue || '-'} ← ${value}`
+          );
+        } catch (e) {
+          oldClient[field] = oldValue;
+          renderVipTable();
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          alert('تعذر تحديث بيانات VIP: ' + (e.message || e));
+        }
+      }
+
+      async function deleteVipClient(id, name) {
+        if (!supabase || !currentUser || currentUser.role !== 'admin') {
+          alert('الحذف متاح للإدارة فقط.');
+          return;
+        }
+        if (!confirm(`تأكيد حذف عميل VIP: ${name || ''}؟`)) return;
+
+        try {
+          const { error } = await supabase.from('vip_clients').delete().eq('id', id);
+          if (error) throw error;
+          vipClients = vipClients.filter(c => String(c.id) !== String(id));
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          logActivity('VIP حذف', currentUser.name, name || 'عميل VIP', 'تم حذف العميل من قسم VIP');
+        } catch (e) {
+          alert('تعذر حذف عميل VIP: ' + (e.message || e));
+        }
+      }
+
+      async function fetchVipClientsFromCloud() {
+        if (!supabase || !canAccessVip()) return;
+
+        const statusEl = document.getElementById('vipSyncStatus');
+        const notice = document.getElementById('vipSetupNotice');
+        if (statusEl) statusEl.innerText = '🔄 جاري مزامنة VIP...';
+
+        try {
+          let allData = [];
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from('vip_clients')
+              .select('*')
+              .order('id', { ascending: false })
+              .range(from, from + batchSize - 1);
+
+            if (error) throw error;
+            if (data && data.length) {
+              allData = allData.concat(data);
+              if (data.length < batchSize) hasMore = false;
+              else from += batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          vipClients = allData;
+          if (notice) notice.style.display = 'none';
+          if (statusEl) statusEl.innerText = `🟢 VIP متصل (${vipClients.length.toLocaleString('ar-EG')} عميل)`;
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+        } catch (e) {
+          console.error('VIP fetch error:', e);
+          vipClients = [];
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          if (statusEl) statusEl.innerText = '🔴 VIP غير جاهز';
+          if (notice) {
+            notice.style.display = 'block';
+            notice.innerText = 'قسم VIP محتاج إنشاء جدول vip_clients في Supabase أولاً. شغّل ملف SQL المرفق مرة واحدة ثم حدّث الصفحة. تفاصيل الخطأ: ' + (e.message || e);
+          }
+        }
+      }
+
+      async function importVipFile(file) {
+        if (!file || !supabase || !canAccessVip()) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+          try {
+            const bytes = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const existingPhones = new Set(vipClients.map(c => normalizePhoneNumber(c.phone)).filter(Boolean));
+            const seen = new Set();
+            const rows = [];
+            let duplicateCount = 0;
+
+            jsonData.forEach(row => {
+              const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
+              const phone = normalizePhoneNumber(
+                row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || row['الموبايل'] || row['رقم الواتساب'] || ''
+              );
+              const whatsappStatus = String(
+                row['التواصل واتس اب'] || row['التواصل واتساب'] || row['حالة التواصل واتس اب'] || row['حالة الواتس'] || row['WhatsApp Status'] || row['Whatsapp Status'] || 'لم يتم'
+              ).trim() || 'لم يتم';
+              const supportStatus = String(
+                row['حالة الدعم'] || row['الدعم'] || row['Support Status'] || row['Support'] || 'جديد'
+              ).trim() || 'جديد';
+              const amountRaw = row['المبلغ'] || row['المبلغ المدفوع'] || row['Amount'] || 0;
+              const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
+
+              if (!name && !phone) return;
+              if (phone && (existingPhones.has(phone) || seen.has(phone))) {
+                duplicateCount++;
+                return;
+              }
+              if (phone) seen.add(phone);
+
+              rows.push({
+                name: String(name || 'عميل VIP').trim(),
+                phone,
+                whatsapp_status: whatsappStatus,
+                support_status: supportStatus,
+                amount,
+                date: todayStr
+              });
+            });
+
+            if (rows.length === 0) {
+              alert(`لم يتم العثور على بيانات VIP جديدة. المكرر: ${duplicateCount.toLocaleString('ar-EG')}`);
+              return;
+            }
+
+            const chunkSize = 500;
+            for (let i = 0; i < rows.length; i += chunkSize) {
+              const chunk = rows.slice(i, i + chunkSize);
+              const { error } = await supabase.from('vip_clients').insert(chunk);
+              if (error) throw error;
+            }
+
+            logActivity(
+              'VIP استيراد',
+              currentUser ? currentUser.name : 'النظام',
+              `${rows.length} عميل VIP`,
+              `تم رفع ${rows.length} عميل VIP وتخطي ${duplicateCount} مكرر`
+            );
+            alert(`✅ تم رفع ${rows.length.toLocaleString('ar-EG')} عميل VIP.\n🧹 تم تخطي ${duplicateCount.toLocaleString('ar-EG')} رقم مكرر.`);
+            await fetchVipClientsFromCloud();
+          } catch (e) {
+            console.error('VIP import error:', e);
+            alert('تعذر رفع شيت VIP: ' + (e.message || e));
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      function exportVipClients() {
+        if (!canAccessVip()) return;
+        const data = getFilteredVipClients();
+        if (data.length === 0) {
+          alert('لا توجد بيانات VIP لتصديرها.');
+          return;
+        }
+
+        const exportData = data.map(c => ({
+          'الاسم': c.name || '',
+          'الرقم': normalizePhoneNumber(c.phone || ''),
+          'التواصل واتس اب': c.whatsapp_status || '',
+          'حالة الدعم': c.support_status || '',
+          'المبلغ': c.amount || 0,
+          'تاريخ الإضافة': c.date || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'VIP');
+        XLSX.writeFile(wb, 'VIP_CRM.xlsx');
+      }
+
+      function showVipSection() {
+        if (!canAccessVip()) {
+          alert('هذا القسم مخصص للإدارة وحساب VIP المصرح فقط.');
+          return;
+        }
+
+        currentSection = 'vip';
+        selectedIds.clear();
+        currentPage = 1;
+
+        const standard = document.getElementById('standardCRMSection');
+        const vip = document.getElementById('vipCRMSection');
+        const menBtn = document.getElementById('sectionMenBtn');
+        const womBtn = document.getElementById('sectionWomenBtn');
+        const vipBtn = document.getElementById('sectionVipBtn');
+
+        if (standard) standard.style.display = 'none';
+        if (vip) vip.style.display = 'block';
+        if (menBtn) menBtn.classList.remove('section-active');
+        if (womBtn) womBtn.classList.remove('section-active');
+        if (vipBtn) vipBtn.classList.add('section-active');
+
+        updateBulkActionBar();
+        fetchVipClientsFromCloud();
+      }
+
       // جلب البيانات من السحابة مع الحفاظ على مكان التمرير
       async function fetchClientsFromCloud(preserveScroll = true) {
         if (!supabase) return;
@@ -1029,7 +1582,14 @@
           supabase
             .channel('clients_db_changes_timestamped')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
-              fetchClientsFromCloud(true);
+              if (currentUser && currentUser.role !== 'vip' && currentSection !== 'vip') fetchClientsFromCloud(true);
+            })
+            .subscribe();
+
+          supabase
+            .channel('vip_clients_db_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'vip_clients' }, () => {
+              if (canAccessVip()) fetchVipClientsFromCloud();
             })
             .subscribe();
 
@@ -1243,13 +1803,14 @@
 
       function maybeShowMonthlyFollowUpPopup() {
         if (followUpPopupShownForSession || !currentUser) return;
-        if (currentUser.role === 'admin') return;
+        if (currentUser.role === 'admin' || currentUser.role === 'vip') return;
         followUpPopupShownForSession = true;
         renderMonthlyFollowUpPopup();
       }
 
       // فلترة صارمة حسب القسم المفتوح
       function getActiveSectionClients() {
+        if (currentSection === 'vip') return [];
         if (currentSection === 'women') {
           return clients.filter(c => c.category === 'women');
         }
@@ -1915,28 +2476,44 @@
       }
 
       function switchSection(section) {
+        if (section === 'vip') {
+          showVipSection();
+          return;
+        }
+
+        if (currentUser && currentUser.role === 'vip') return;
+        if (currentUser && currentUser.role === 'men' && section !== 'men') return;
+        if (currentUser && currentUser.role === 'women' && section !== 'women') return;
+
         currentSection = section;
         selectedIds.clear();
         currentPage = 1;
 
+        const standard = document.getElementById('standardCRMSection');
+        const vip = document.getElementById('vipCRMSection');
         const menBtn = document.getElementById('sectionMenBtn');
         const womBtn = document.getElementById('sectionWomenBtn');
+        const vipBtn = document.getElementById('sectionVipBtn');
         const heroStats = document.getElementById('heroStatsContainer');
         const heroTitle = document.getElementById('heroTitle');
         const heroIcon = document.getElementById('heroIcon');
 
+        if (standard) standard.style.display = 'block';
+        if (vip) vip.style.display = 'none';
+        if (vipBtn) vipBtn.classList.remove('section-active');
+
         if (section === 'women') {
           if (menBtn) menBtn.classList.remove('section-active');
           if (womBtn) womBtn.classList.add('section-active');
-          heroStats.className = 'bg-[#fdf2f8] border border-[#fbcfe8] rounded-2xl p-6 shadow-sm';
-          heroTitle.innerText = 'إحصائيات قسم السيدات 🧕';
-          heroIcon.innerText = '🧕';
+          if (heroStats) heroStats.className = 'bg-[#fdf2f8] border border-[#fbcfe8] rounded-2xl p-6 shadow-sm';
+          if (heroTitle) heroTitle.innerText = 'إحصائيات قسم السيدات 🧕';
+          if (heroIcon) heroIcon.innerText = '🧕';
         } else {
           if (womBtn) womBtn.classList.remove('section-active');
           if (menBtn) menBtn.classList.add('section-active');
-          heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
-          heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي 👨)';
-          heroIcon.innerText = '👨';
+          if (heroStats) heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
+          if (heroTitle) heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي 👨)';
+          if (heroIcon) heroIcon.innerText = '👨';
         }
 
         updateDashboardStats();
@@ -1944,6 +2521,7 @@
         renderTable(false);
         updateBulkActionBar();
       }
+
 
       // تطبيق الصلاحيات والواجهة حسب دور المستخدم
       function applyUserPermissions() {
@@ -1953,34 +2531,60 @@
         const roleBadge = document.getElementById('currentUserRoleBadge');
         const adminHistoryBtn = document.getElementById('btnAdminHistory');
         const switcherContainer = document.getElementById('sectionSwitcherContainer');
+        const vipBtn = document.getElementById('sectionVipBtn');
 
         if (nameDisplay) nameDisplay.innerText = currentUser.name;
-
-        if (currentUser.role === 'admin') {
-          roleBadge.innerText = '👑 مدير النظام';
-          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700';
-          if (adminHistoryBtn) adminHistoryBtn.style.display = 'flex';
-          if (switcherContainer) switcherContainer.style.display = 'flex';
-          switchSection('men');
-        } else if (currentUser.role === 'men') {
-          roleBadge.innerText = '👨 عبدالرحمن أبو شامة';
-          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
-          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
-          if (switcherContainer) switcherContainer.style.display = 'none';
-          switchSection('men');
-        } else if (currentUser.role === 'women') {
-          roleBadge.innerText = '🧕 موظفة سيدات';
-          roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700';
-          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
-          if (switcherContainer) switcherContainer.style.display = 'none';
-          switchSection('women');
-        }
 
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
 
-        fetchClientsFromCloud(false);
+        if (currentUser.role === 'admin') {
+          if (roleBadge) {
+            roleBadge.innerText = '👑 مدير النظام';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'flex';
+          if (switcherContainer) switcherContainer.style.display = 'flex';
+          if (vipBtn) vipBtn.style.display = 'flex';
+          switchSection('men');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'men') {
+          if (roleBadge) {
+            roleBadge.innerText = '👨 عبدالرحمن أبو شامة';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          switchSection('men');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'women') {
+          if (roleBadge) {
+            roleBadge.innerText = '🧕 موظفة سيدات';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          switchSection('women');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'vip') {
+          if (roleBadge) {
+            roleBadge.innerText = '⭐ مستخدم VIP';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          showVipSection();
+        } else {
+          localStorage.removeItem('crm_logged_user');
+          currentUser = null;
+          document.getElementById('mainApp').style.display = 'none';
+          document.getElementById('loginScreen').style.display = 'flex';
+        }
       }
+
 
       async function startApp() {
         initDateHeader();
@@ -1991,8 +2595,18 @@
         const savedSession = localStorage.getItem('crm_logged_user');
         if (savedSession) {
           try {
-            currentUser = JSON.parse(savedSession);
-            applyUserPermissions();
+            const parsedSession = JSON.parse(savedSession);
+            if (
+              parsedSession &&
+              parsedSession.role === 'vip' &&
+              (!cloudUsers.vip.enabled || String(parsedSession.username || '').toLowerCase() !== cloudUsers.vip.username)
+            ) {
+              localStorage.removeItem('crm_logged_user');
+              currentUser = null;
+            } else {
+              currentUser = parsedSession;
+              applyUserPermissions();
+            }
           } catch (e) {
             localStorage.removeItem('crm_logged_user');
           }
@@ -2019,6 +2633,13 @@
             matched = { username: 'men', role: 'men', name: cloudUsers.men.name };
           } else if (userInp === 'women' && passInp === cloudUsers.women.pass) {
             matched = { username: 'women', role: 'women', name: cloudUsers.women.name };
+          } else if (
+            cloudUsers.vip.enabled &&
+            cloudUsers.vip.username &&
+            userInp === cloudUsers.vip.username &&
+            passInp === cloudUsers.vip.pass
+          ) {
+            matched = { username: cloudUsers.vip.username, role: 'vip', name: cloudUsers.vip.name || 'مستخدم VIP' };
           }
 
           if (matched) {
@@ -2076,6 +2697,31 @@
         document.getElementById('sectionWomenBtn').addEventListener('click', () => {
           if (currentUser && currentUser.role === 'admin') switchSection('women');
         });
+
+        document.getElementById('sectionVipBtn').addEventListener('click', () => {
+          if (currentUser && currentUser.role === 'admin') switchSection('vip');
+        });
+
+        const vipSearchInput = document.getElementById('vipSearchInput');
+        const vipWhatsAppFilter = document.getElementById('vipWhatsAppFilter');
+        const vipSupportFilter = document.getElementById('vipSupportFilter');
+        const btnVipImport = document.getElementById('btnVipImport');
+        const vipFileInput = document.getElementById('vipFileInput');
+        const btnVipExport = document.getElementById('btnVipExport');
+
+        if (vipSearchInput) vipSearchInput.addEventListener('input', renderVipTable);
+        if (vipWhatsAppFilter) vipWhatsAppFilter.addEventListener('change', renderVipTable);
+        if (vipSupportFilter) vipSupportFilter.addEventListener('change', renderVipTable);
+        if (btnVipImport) btnVipImport.addEventListener('click', () => {
+          if (!canAccessVip()) return alert('غير مصرح بالدخول لقسم VIP.');
+          vipFileInput.click();
+        });
+        if (vipFileInput) vipFileInput.addEventListener('change', async function(e) {
+          const file = e.target.files[0];
+          if (file) await importVipFile(file);
+          e.target.value = '';
+        });
+        if (btnVipExport) btnVipExport.addEventListener('click', exportVipClients);
 
         document.getElementById('clientEmployeeSelect').addEventListener('change', function() {
           const customInp = document.getElementById('clientEmployeeCustom');
@@ -2168,6 +2814,18 @@
             alert('كلمة مرور الأدمن غير صحيحة.');
           }
         });
+
+        const btnSaveVipUser = document.getElementById('btnSaveVipUser');
+        if (btnSaveVipUser) {
+          btnSaveVipUser.addEventListener('click', async function() {
+            const adminCheck = prompt('أدخل كلمة مرور الأدمن لتأكيد حفظ أو تعديل حساب VIP:');
+            if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+              await saveVipUserSettings();
+            } else if (adminCheck !== null) {
+              alert('كلمة مرور الأدمن غير صحيحة.');
+            }
+          });
+        }
 
         document.getElementById('logSearchInput').addEventListener('input', renderAdminLogsTable);
         document.getElementById('logActionFilter').addEventListener('change', renderAdminLogsTable);
