@@ -40,17 +40,18 @@
       vertical-align: middle;
     }
     #vipTable th:nth-child(1), #vipTable td:nth-child(1) { width: 4%; text-align: center; }
-    #vipTable th:nth-child(2), #vipTable td:nth-child(2) { width: 19%; }
+    #vipTable th:nth-child(2), #vipTable td:nth-child(2) { width: 4%; text-align: center; }
     #vipTable th:nth-child(3), #vipTable td:nth-child(3) { width: 18%; }
-    #vipTable th:nth-child(4), #vipTable td:nth-child(4) { width: 14%; }
-    #vipTable th:nth-child(5), #vipTable td:nth-child(5) { width: 14%; }
-    #vipTable th:nth-child(6), #vipTable td:nth-child(6) { width: 12%; }
-    #vipTable th:nth-child(7), #vipTable td:nth-child(7) { width: 9%; text-align: center; }
-    #vipTable th:nth-child(8), #vipTable td:nth-child(8) { width: 10%; text-align: center; }
-    #vipTable td:nth-child(2) { overflow-wrap: anywhere; }
-    #vipTable td:nth-child(3) .flex,
-    #vipTable td:nth-child(6) .flex,
-    #vipTable td:nth-child(8) .flex {
+    #vipTable th:nth-child(4), #vipTable td:nth-child(4) { width: 17%; }
+    #vipTable th:nth-child(5), #vipTable td:nth-child(5) { width: 13%; }
+    #vipTable th:nth-child(6), #vipTable td:nth-child(6) { width: 13%; }
+    #vipTable th:nth-child(7), #vipTable td:nth-child(7) { width: 12%; }
+    #vipTable th:nth-child(8), #vipTable td:nth-child(8) { width: 9%; text-align: center; }
+    #vipTable th:nth-child(9), #vipTable td:nth-child(9) { width: 10%; text-align: center; }
+    #vipTable td:nth-child(3) { overflow-wrap: anywhere; }
+    #vipTable td:nth-child(4) .flex,
+    #vipTable td:nth-child(7) .flex,
+    #vipTable td:nth-child(9) .flex {
       gap: 6px !important;
     }
     #vipTable select {
@@ -472,6 +473,10 @@
           <div class="flex flex-wrap gap-2">
             <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع أي شيت VIP</button>
             <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
+            <button type="button" id="btnVipSelectFiltered" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">☑️ تحديد النتائج الظاهرة</button>
+            <button type="button" id="btnVipDeleteSelected" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer" style="display:none;">🗑️ حذف المحدد (<span id="vipSelectedCount">0</span>)</button>
+            <button type="button" id="btnVipClearSelection" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">✖️ إلغاء التحديد</button>
+            <button type="button" id="btnVipDeleteAll" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer" style="display:none;">⚠️ مسح كل بيانات VIP</button>
           </div>
         </div>
       </div>
@@ -481,6 +486,7 @@
           <table id="vipTable" class="text-right text-sm">
             <thead class="bg-amber-50 text-amber-950 text-xs font-bold">
               <tr>
+                <th class="p-3.5 text-center"><input type="checkbox" id="vipSelectAllCheckbox" class="w-4 h-4 accent-amber-500 cursor-pointer" title="تحديد كل النتائج الظاهرة"></th>
                 <th class="p-3.5">#</th>
                 <th class="p-3.5">الاسم</th>
                 <th class="p-3.5">الرقم</th>
@@ -854,6 +860,7 @@
       let vipClients = [];
       let activityLogs = [];
       let selectedIds = new Set();
+      let selectedVipIds = new Set();
       let currentTab = 'الكل';
       let currentSection = 'men'; // 'men' | 'women' | 'vip'
 
@@ -1263,6 +1270,37 @@
           .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
       }
 
+      function updateVipSelectionUI(filteredData = null) {
+        const isAdmin = !!(currentUser && currentUser.role === 'admin');
+        const data = filteredData || getFilteredVipClients();
+        const validIds = new Set(vipClients.map(c => String(c.id)));
+        selectedVipIds.forEach(id => {
+          if (!validIds.has(String(id))) selectedVipIds.delete(String(id));
+        });
+
+        const selectedCount = document.getElementById('vipSelectedCount');
+        const deleteSelectedBtn = document.getElementById('btnVipDeleteSelected');
+        const clearBtn = document.getElementById('btnVipClearSelection');
+        const deleteAllBtn = document.getElementById('btnVipDeleteAll');
+        const selectFilteredBtn = document.getElementById('btnVipSelectFiltered');
+        const selectAll = document.getElementById('vipSelectAllCheckbox');
+
+        if (selectedCount) selectedCount.innerText = selectedVipIds.size.toLocaleString('ar-EG');
+        if (deleteSelectedBtn) deleteSelectedBtn.style.display = isAdmin && selectedVipIds.size > 0 ? 'inline-flex' : 'none';
+        if (clearBtn) clearBtn.style.display = isAdmin && selectedVipIds.size > 0 ? 'inline-flex' : 'none';
+        if (deleteAllBtn) deleteAllBtn.style.display = isAdmin && vipClients.length > 0 ? 'inline-flex' : 'none';
+        if (selectFilteredBtn) selectFilteredBtn.style.display = isAdmin && data.length > 0 ? 'inline-flex' : 'none';
+
+        if (selectAll) {
+          selectAll.style.visibility = isAdmin ? 'visible' : 'hidden';
+          const filteredIds = data.map(c => String(c.id));
+          const selectedInFiltered = filteredIds.filter(id => selectedVipIds.has(id)).length;
+          selectAll.checked = filteredIds.length > 0 && selectedInFiltered === filteredIds.length;
+          selectAll.indeterminate = selectedInFiltered > 0 && selectedInFiltered < filteredIds.length;
+          selectAll.disabled = !isAdmin || filteredIds.length === 0;
+        }
+      }
+
       function renderVipTable() {
         const tbody = document.getElementById('vipTableBody');
         const emptyState = document.getElementById('vipEmptyState');
@@ -1270,6 +1308,7 @@
         if (!tbody) return;
 
         const data = getFilteredVipClients();
+        const isAdmin = !!(currentUser && currentUser.role === 'admin');
         tbody.innerHTML = '';
         if (countEl) countEl.innerText = data.length.toLocaleString('ar-EG');
 
@@ -1277,13 +1316,17 @@
 
         data.forEach((c, index) => {
           const tr = document.createElement('tr');
-          tr.className = 'hover:bg-amber-50/40 transition';
+          const rowId = String(c.id);
+          tr.className = `${selectedVipIds.has(rowId) ? 'bg-red-50/60' : 'hover:bg-amber-50/40'} transition`;
           const phone = normalizePhoneNumber(c.phone || '');
           const waPhone = formatWhatsAppPhone(phone);
           const whatsOptions = buildVipStatusOptions(c.whatsapp_status || 'لم يتم', ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
           const supportOptions = buildVipStatusOptions(c.support_status || 'غير محدد', ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
 
           tr.innerHTML = `
+            <td class="p-3.5 text-center">
+              ${isAdmin ? `<input type="checkbox" class="vip-row-checkbox w-4 h-4 accent-red-600 cursor-pointer" data-id="${escapeHtml(c.id)}" ${selectedVipIds.has(rowId) ? 'checked' : ''}>` : ''}
+            </td>
             <td class="p-3.5 text-gray-500 font-semibold">${index + 1}</td>
             <td class="p-3.5 font-bold text-gray-900">${c.name ? escapeHtml(c.name) : '<span class="text-red-500">بدون اسم</span>'}</td>
             <td class="p-3.5">
@@ -1312,7 +1355,7 @@
             <td class="p-3.5 text-center">
               <div class="flex items-center justify-center gap-1.5">
                 <button type="button" class="vip-edit-name-btn text-[11px] bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-blue-100" data-id="${escapeHtml(c.id)}">✏️ تعديل الاسم</button>
-                ${currentUser && currentUser.role === 'admin'
+                ${isAdmin
                   ? `<button type="button" class="vip-delete-btn text-[11px] bg-red-50 text-red-700 border border-red-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-red-100" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name || 'بدون اسم')}">حذف</button>`
                   : ''}
               </div>
@@ -1321,6 +1364,14 @@
           tbody.appendChild(tr);
         });
 
+        tbody.querySelectorAll('.vip-row-checkbox').forEach(el => {
+          el.addEventListener('change', function() {
+            const id = String(this.dataset.id);
+            if (this.checked) selectedVipIds.add(id);
+            else selectedVipIds.delete(id);
+            renderVipTable();
+          });
+        });
         tbody.querySelectorAll('.vip-whatsapp-status').forEach(el => {
           el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'whatsapp_status', el.value));
         });
@@ -1336,6 +1387,74 @@
         tbody.querySelectorAll('.vip-delete-btn').forEach(el => {
           el.addEventListener('click', () => deleteVipClient(el.dataset.id, el.dataset.name));
         });
+
+        updateVipSelectionUI(data);
+      }
+
+      function selectAllFilteredVip() {
+        if (!currentUser || currentUser.role !== 'admin') return;
+        getFilteredVipClients().forEach(c => selectedVipIds.add(String(c.id)));
+        renderVipTable();
+      }
+
+      function clearVipSelection() {
+        selectedVipIds.clear();
+        renderVipTable();
+      }
+
+      async function deleteVipIds(ids, activityLabel) {
+        if (!supabase || !currentUser || currentUser.role !== 'admin') {
+          alert('الحذف متاح للإدارة فقط.');
+          return false;
+        }
+        const uniqueIds = [...new Set((ids || []).map(String))].filter(Boolean);
+        if (uniqueIds.length === 0) return false;
+
+        try {
+          const chunkSize = 200;
+          for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+            const chunk = uniqueIds.slice(i, i + chunkSize);
+            const { error } = await supabase.from('vip_clients').delete().in('id', chunk);
+            if (error) throw error;
+          }
+
+          const idSet = new Set(uniqueIds);
+          vipClients = vipClients.filter(c => !idSet.has(String(c.id)));
+          uniqueIds.forEach(id => selectedVipIds.delete(id));
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          logActivity('VIP حذف متعدد', currentUser.name, `${uniqueIds.length} سجل VIP`, activityLabel || `تم حذف ${uniqueIds.length} سجل من قسم VIP`);
+          return true;
+        } catch (e) {
+          alert('تعذر حذف بيانات VIP: ' + (e.message || e));
+          return false;
+        }
+      }
+
+      async function deleteSelectedVipClients() {
+        if (!currentUser || currentUser.role !== 'admin') return alert('الحذف متاح للإدارة فقط.');
+        const ids = Array.from(selectedVipIds);
+        if (ids.length === 0) return alert('حدد صف أو أكثر أولاً.');
+        if (!confirm(`أنت على وشك حذف ${ids.length.toLocaleString('ar-EG')} سجل VIP نهائياً. هل تريد المتابعة؟`)) return;
+        const ok = await deleteVipIds(ids, `تم حذف ${ids.length} سجل VIP محدد يدوياً`);
+        if (ok) alert(`✅ تم حذف ${ids.length.toLocaleString('ar-EG')} سجل بنجاح.`);
+      }
+
+      async function deleteAllVipClients() {
+        if (!currentUser || currentUser.role !== 'admin') return alert('مسح كل البيانات متاح للإدارة فقط.');
+        if (vipClients.length === 0) return alert('لا توجد بيانات VIP لمسحها.');
+
+        const count = vipClients.length;
+        if (!confirm(`⚠️ تحذير: سيتم حذف كل بيانات VIP وعددها ${count.toLocaleString('ar-EG')} سجل نهائياً. هل تريد الاستمرار؟`)) return;
+        const phrase = prompt('للتأكيد النهائي اكتب: مسح الكل');
+        if (String(phrase || '').trim() !== 'مسح الكل') {
+          alert('تم إلغاء العملية لأن عبارة التأكيد غير صحيحة.');
+          return;
+        }
+
+        const ok = await deleteVipIds(vipClients.map(c => c.id), `تم مسح جميع بيانات VIP (${count} سجل)`);
+        if (ok) alert('✅ تم مسح كل بيانات VIP بنجاح.');
       }
 
       async function updateVipClientField(id, field, value) {
@@ -1426,6 +1545,7 @@
           const { error } = await supabase.from('vip_clients').delete().eq('id', id);
           if (error) throw error;
           vipClients = vipClients.filter(c => String(c.id) !== String(id));
+          selectedVipIds.delete(String(id));
           updateVipDashboard();
           refreshVipFilterOptions();
           renderVipTable();
@@ -1466,6 +1586,8 @@
           }
 
           vipClients = allData;
+          const currentVipIds = new Set(vipClients.map(c => String(c.id)));
+          selectedVipIds.forEach(id => { if (!currentVipIds.has(String(id))) selectedVipIds.delete(String(id)); });
           if (notice) notice.style.display = 'none';
           if (statusEl) statusEl.innerText = `🟢 VIP متصل (${vipClients.length.toLocaleString('ar-EG')} عميل)`;
           updateVipDashboard();
@@ -3120,6 +3242,11 @@
         const btnVipImport = document.getElementById('btnVipImport');
         const vipFileInput = document.getElementById('vipFileInput');
         const btnVipExport = document.getElementById('btnVipExport');
+        const vipSelectAllCheckbox = document.getElementById('vipSelectAllCheckbox');
+        const btnVipSelectFiltered = document.getElementById('btnVipSelectFiltered');
+        const btnVipDeleteSelected = document.getElementById('btnVipDeleteSelected');
+        const btnVipClearSelection = document.getElementById('btnVipClearSelection');
+        const btnVipDeleteAll = document.getElementById('btnVipDeleteAll');
 
         if (vipSearchInput) vipSearchInput.addEventListener('input', renderVipTable);
         if (vipWhatsAppFilter) vipWhatsAppFilter.addEventListener('change', renderVipTable);
@@ -3134,6 +3261,17 @@
           e.target.value = '';
         });
         if (btnVipExport) btnVipExport.addEventListener('click', exportVipClients);
+        if (vipSelectAllCheckbox) vipSelectAllCheckbox.addEventListener('change', function() {
+          if (!currentUser || currentUser.role !== 'admin') return;
+          const filteredIds = getFilteredVipClients().map(c => String(c.id));
+          if (this.checked) filteredIds.forEach(id => selectedVipIds.add(id));
+          else filteredIds.forEach(id => selectedVipIds.delete(id));
+          renderVipTable();
+        });
+        if (btnVipSelectFiltered) btnVipSelectFiltered.addEventListener('click', selectAllFilteredVip);
+        if (btnVipDeleteSelected) btnVipDeleteSelected.addEventListener('click', deleteSelectedVipClients);
+        if (btnVipClearSelection) btnVipClearSelection.addEventListener('click', clearVipSelection);
+        if (btnVipDeleteAll) btnVipDeleteAll.addEventListener('click', deleteAllVipClients);
 
         document.getElementById('clientEmployeeSelect').addEventListener('change', function() {
           const customInp = document.getElementById('clientEmployeeCustom');
