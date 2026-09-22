@@ -389,7 +389,7 @@
               <h2 class="text-xl font-extrabold text-amber-900">قسم VIP</h2>
               <span id="vipSyncStatus" class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">خاص بالإدارة والمستخدم المصرح</span>
             </div>
-            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب وحالة الدعم.</p>
+            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب ودورية الدعم/الدفع.</p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
             <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
@@ -420,7 +420,7 @@
             <option value="">كل حالات واتساب</option>
           </select>
           <select id="vipSupportFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
-            <option value="">كل حالات الدعم</option>
+            <option value="">كل دوريات الدعم</option>
           </select>
           <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2">
             <span>🎯</span>
@@ -431,7 +431,7 @@
 
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="text-xs text-gray-500 font-semibold">
-            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، حالة الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
+            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، دورية الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع أي شيت VIP</button>
@@ -449,7 +449,7 @@
                 <th class="p-3.5">الاسم</th>
                 <th class="p-3.5">الرقم</th>
                 <th class="p-3.5">التواصل واتس اب</th>
-                <th class="p-3.5">حالة الدعم</th>
+                <th class="p-3.5">دورية الدعم</th>
                 <th class="p-3.5">المبلغ</th>
                 <th class="p-3.5">تاريخ الإضافة</th>
                 <th class="p-3.5 text-center">إجراءات</th>
@@ -1175,12 +1175,14 @@
 
         const whatsappValues = [...new Set(vipClients.map(c => String(c.whatsapp_status || '').trim()).filter(Boolean))]
           .sort((a, b) => a.localeCompare(b, 'ar'));
-        const supportValues = [...new Set(vipClients.map(c => String(c.support_status || '').trim()).filter(Boolean))]
+        const fixedSupportValues = ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'];
+        const existingSupportValues = [...new Set(vipClients.map(c => String(c.support_status || '').trim()).filter(Boolean))]
           .sort((a, b) => a.localeCompare(b, 'ar'));
+        const supportValues = [...fixedSupportValues, ...existingSupportValues.filter(v => !fixedSupportValues.includes(v))];
 
         whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
           whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-        supportFilter.innerHTML = '<option value="">كل حالات الدعم</option>' +
+        supportFilter.innerHTML = '<option value="">كل دوريات الدعم</option>' +
           supportValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
         if (whatsappValues.includes(currentWhats)) whatsappFilter.value = currentWhats;
@@ -1243,11 +1245,11 @@
           const phone = normalizePhoneNumber(c.phone || '');
           const waPhone = formatWhatsAppPhone(phone);
           const whatsOptions = buildVipStatusOptions(c.whatsapp_status || 'لم يتم', ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
-          const supportOptions = buildVipStatusOptions(c.support_status || 'جديد', ['جديد', 'قيد المتابعة', 'تم الدعم', 'مغلق']);
+          const supportOptions = buildVipStatusOptions(c.support_status || 'غير محدد', ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
 
           tr.innerHTML = `
             <td class="p-3.5 text-gray-500 font-semibold">${index + 1}</td>
-            <td class="p-3.5 font-bold text-gray-900">${escapeHtml(c.name || 'عميل VIP')}</td>
+            <td class="p-3.5 font-bold text-gray-900">${c.name ? escapeHtml(c.name) : '<span class="text-red-500">بدون اسم</span>'}</td>
             <td class="p-3.5">
               <div class="flex items-center gap-2">
                 <span dir="ltr" class="font-mono text-xs font-bold text-gray-700">${escapeHtml(phone)}</span>
@@ -1267,9 +1269,12 @@
             <td class="p-3.5 font-extrabold text-blue-700">${(parseFloat(c.amount) || 0).toLocaleString('ar-EG')} ج.م</td>
             <td class="p-3.5 text-xs text-gray-500 font-semibold">${escapeHtml(c.date || '-')}</td>
             <td class="p-3.5 text-center">
-              ${currentUser && currentUser.role === 'admin'
-                ? `<button type="button" class="vip-delete-btn text-[11px] bg-red-50 text-red-700 border border-red-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-red-100" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name || 'عميل VIP')}">حذف</button>`
-                : '<span class="text-[10px] text-gray-400">إدارة الحالة متاحة</span>'}
+              <div class="flex items-center justify-center gap-1.5">
+                <button type="button" class="vip-edit-name-btn text-[11px] bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-blue-100" data-id="${escapeHtml(c.id)}">✏️ تعديل الاسم</button>
+                ${currentUser && currentUser.role === 'admin'
+                  ? `<button type="button" class="vip-delete-btn text-[11px] bg-red-50 text-red-700 border border-red-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-red-100" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name || 'بدون اسم')}">حذف</button>`
+                  : ''}
+              </div>
             </td>
           `;
           tbody.appendChild(tr);
@@ -1281,6 +1286,9 @@
         tbody.querySelectorAll('.vip-support-status').forEach(el => {
           el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'support_status', el.value));
         });
+        tbody.querySelectorAll('.vip-edit-name-btn').forEach(el => {
+          el.addEventListener('click', () => editVipClientName(el.dataset.id));
+        });
         tbody.querySelectorAll('.vip-delete-btn').forEach(el => {
           el.addEventListener('click', () => deleteVipClient(el.dataset.id, el.dataset.name));
         });
@@ -1288,7 +1296,7 @@
 
       async function updateVipClientField(id, field, value) {
         if (!supabase || !canAccessVip()) return;
-        if (!['whatsapp_status', 'support_status'].includes(field)) return;
+        if (!['whatsapp_status', 'support_status', 'name'].includes(field)) return;
 
         const oldClient = vipClients.find(c => String(c.id) === String(id));
         if (!oldClient) return;
@@ -1307,8 +1315,8 @@
           logActivity(
             'VIP تعديل',
             currentUser ? currentUser.name : 'مستخدم VIP',
-            oldClient.name || 'عميل VIP',
-            `${field === 'whatsapp_status' ? 'حالة واتساب' : 'حالة الدعم'}: ${oldValue || '-'} ← ${value}`
+            oldClient.name || 'بدون اسم',
+            `${field === 'whatsapp_status' ? 'حالة واتساب' : field === 'support_status' ? 'دورية الدعم' : 'الاسم'}: ${oldValue || '-'} ← ${value}`
           );
         } catch (e) {
           oldClient[field] = oldValue;
@@ -1317,6 +1325,24 @@
           refreshVipFilterOptions();
           alert('تعذر تحديث بيانات VIP: ' + (e.message || e));
         }
+      }
+
+      async function editVipClientName(id) {
+        if (!canAccessVip()) {
+          alert('غير مصرح بتعديل بيانات VIP.');
+          return;
+        }
+        const client = vipClients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const newName = prompt('اكتب اسم عميل VIP:', client.name || '');
+        if (newName === null) return;
+        const cleanName = String(newName).trim();
+        if (!cleanName) {
+          alert('الاسم لا يمكن أن يكون فارغاً.');
+          return;
+        }
+        if (cleanName === String(client.name || '').trim()) return;
+        await updateVipClientField(id, 'name', cleanName);
       }
 
       async function deleteVipClient(id, name) {
@@ -1333,7 +1359,7 @@
           updateVipDashboard();
           refreshVipFilterOptions();
           renderVipTable();
-          logActivity('VIP حذف', currentUser.name, name || 'عميل VIP', 'تم حذف العميل من قسم VIP');
+          logActivity('VIP حذف', currentUser.name, name || 'بدون اسم', 'تم حذف العميل من قسم VIP');
         } catch (e) {
           alert('تعذر حذف عميل VIP: ' + (e.message || e));
         }
@@ -1429,7 +1455,7 @@
           'whatsappstatus','contactstatus','communicationstatus','whatsappcontact','followupstatus'
         ],
         support_status: [
-          'حالة الدعم','حاله الدعم','الدعم','حالة دعم','حاله دعم','supportstatus','support','servicestatus','casestatus'
+          'حالة الدعم','حاله الدعم','الدعم','حالة دعم','حاله دعم','دورية الدعم','دوريه الدعم','مدة الدعم','مده الدعم','نوع الدعم','نظام الدفع','دورية الدفع','دوريه الدفع','مدة الاشتراك','مده الاشتراك','نوع الاشتراك','الدورية','الدوريه','supportstatus','support','servicestatus','casestatus','billingcycle','paymentcycle','subscriptioncycle','billingperiod','supportperiod'
         ],
         amount: [
           'المبلغ','مبلغ','المبلغ المدفوع','المبلغالمدفوع','المدفوع','تم الدفع','المبلغ المحصل','المبلغالمحصل',
@@ -1452,7 +1478,7 @@
         }
         // مطابقة مرنة للعناوين الطويلة أو المختلفة قليلاً
         if ((n.includes('واتساب') || n.includes('whatsapp')) && (n.includes('حاله') || n.includes('status') || n.includes('تواصل') || n.includes('contact'))) return 'whatsapp_status';
-        if ((n.includes('دعم') || n.includes('support')) && (n.includes('حاله') || n.includes('status') || n === 'الدعم' || n === 'support')) return 'support_status';
+        if (((n.includes('دعم') || n.includes('support')) && (n.includes('حاله') || n.includes('status') || n.includes('دوري') || n.includes('مده') || n === 'الدعم' || n === 'support')) || n.includes('نظامالدفع') || n.includes('دوريهالدفع') || n.includes('دوريةالدفع') || n.includes('مدهالاشتراك') || n.includes('مدةالاشتراك') || n.includes('نوعالاشتراك') || n.includes('billingcycle') || n.includes('paymentcycle') || n.includes('subscriptioncycle') || n.includes('billingperiod')) return 'support_status';
         if (n.includes('مبلغ') || n.includes('مدفوع') || n.includes('amount') || n.includes('payment') || n.includes('price')) return 'amount';
         if (n.includes('هاتف') || n.includes('موبايل') || n.includes('محمول') || n.includes('phone') || n.includes('mobile') || (n.includes('واتساب') && !n.includes('حاله') && !n.includes('status') && !n.includes('تواصل'))) return 'phone';
         if (n.includes('اسم') || n === 'name' || n.includes('fullname') || n.includes('clientname') || n.includes('customername')) return 'name';
@@ -1527,11 +1553,22 @@
         return tokens.some(t => n === t || n.includes(t));
       }
 
+      function normalizeVipSupportPeriod(value) {
+        const raw = String(value ?? '').trim();
+        if (!raw) return '';
+        const n = normalizeVipText(convertArabicDigits(raw));
+
+        if (n === 'شهري' || n.includes('كلشهر') || n.includes('شهريا') || n.includes('شهرياً') || n.includes('monthly') || n === '1month' || n === 'month') return 'شهري';
+        if (n.includes('3شهور') || n.includes('3اشهر') || n.includes('ثلاثشهور') || n.includes('ثلاثهاشهر') || n.includes('كل3') || n.includes('quarterly') || n.includes('3months') || n.includes('threemonths')) return 'كل 3 شهور';
+        if (n.includes('6شهور') || n.includes('6اشهر') || n.includes('ستشهور') || n.includes('ستهاشهر') || n.includes('كل6') || n.includes('semiannual') || n.includes('semiannual') || n.includes('6months') || n.includes('sixmonths')) return 'كل 6 شهور';
+        if (n.includes('سنوي') || n.includes('سنه') || n.includes('سنة') || n.includes('كلسنه') || n.includes('كلسنة') || n.includes('annual') || n.includes('yearly') || n.includes('12months') || n.includes('1year')) return 'سنوي';
+
+        return raw;
+      }
+
       function looksLikeVipSupportStatus(value) {
-        const n = normalizeVipText(value);
-        if (!n) return false;
-        const tokens = ['جديد','جار','جاري','متابعه','مكتمل','مغلق','معلق','تمالحل','تمالدعم','يحتاجدعم','لاتوجدمشكله','open','closed','resolved','new','active','pending','support'];
-        return tokens.some(t => n === t || n.includes(t));
+        const normalized = normalizeVipSupportPeriod(value);
+        return ['شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'].includes(normalized);
       }
 
       function inferVipColumnMap(dataRows, maxCols) {
@@ -1610,6 +1647,21 @@
         return map;
       }
 
+      function guessVipNameFromRow(row, map) {
+        const excluded = new Set(Object.values(map || {}).filter(v => Number.isInteger(v)));
+        for (let i = 0; i < (row || []).length; i++) {
+          if (excluded.has(i)) continue;
+          const raw = String(row[i] ?? '').trim();
+          if (!raw || raw.length < 2 || raw.length > 100) continue;
+          if (!/\p{L}/u.test(raw)) continue;
+          if (isVipPhoneLike(raw) || isVipAmountLike(raw) || looksLikeVipWhatsappStatus(raw) || looksLikeVipSupportStatus(raw)) continue;
+          const n = normalizeVipText(raw);
+          if (n.includes('تاريخ') || n.includes('date') || n.includes('ملاحظه') || n.includes('notes')) continue;
+          return raw;
+        }
+        return '';
+      }
+
       function extractVipRowsFromWorksheet(worksheet, sheetName, todayStr) {
         const matrix = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
@@ -1636,7 +1688,8 @@
           const rawName = get(row, 'name');
           const rawPhone = get(row, 'phone');
           const phone = normalizePhoneNumber(convertArabicDigits(rawPhone));
-          const name = String(rawName || '').trim();
+          let name = String(rawName || '').trim();
+          if (!name) name = guessVipNameFromRow(row, map);
 
           // لو مفيش اسم ولا رقم، الصف مالوش معنى كعميل
           if (!name && !phone) {
@@ -1646,12 +1699,12 @@
 
           const whatsappStatus = normalizeVipWhatsappStatus(get(row, 'whatsapp_status'));
           const supportRaw = String(get(row, 'support_status') || '').trim();
-          const supportStatus = supportRaw || 'جديد';
+          const supportStatus = normalizeVipSupportPeriod(supportRaw) || 'غير محدد';
           const amount = parseVipAmount(get(row, 'amount'));
           const rawDate = String(get(row, 'date') || '').trim();
 
           result.push({
-            name: name || 'عميل VIP',
+            name: name || 'بدون اسم',
             phone,
             whatsapp_status: whatsappStatus,
             support_status: supportStatus,
@@ -1766,7 +1819,7 @@
           'الاسم': c.name || '',
           'الرقم': normalizePhoneNumber(c.phone || ''),
           'التواصل واتس اب': c.whatsapp_status || '',
-          'حالة الدعم': c.support_status || '',
+          'دورية الدعم': c.support_status || '',
           'المبلغ': c.amount || 0,
           'تاريخ الإضافة': c.date || ''
         }));
