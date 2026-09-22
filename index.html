@@ -28,6 +28,42 @@
       color: #1e293b !important;
       font-weight: 800 !important;
     }
+
+    /* جدول VIP مضغوط ومنظم لتقليل الفراغات بين الأعمدة */
+    #vipTable {
+      width: 100%;
+      table-layout: fixed;
+    }
+    #vipTable th,
+    #vipTable td {
+      padding: 10px 8px !important;
+      vertical-align: middle;
+    }
+    #vipTable th:nth-child(1), #vipTable td:nth-child(1) { width: 4%; text-align: center; }
+    #vipTable th:nth-child(2), #vipTable td:nth-child(2) { width: 19%; }
+    #vipTable th:nth-child(3), #vipTable td:nth-child(3) { width: 18%; }
+    #vipTable th:nth-child(4), #vipTable td:nth-child(4) { width: 14%; }
+    #vipTable th:nth-child(5), #vipTable td:nth-child(5) { width: 14%; }
+    #vipTable th:nth-child(6), #vipTable td:nth-child(6) { width: 12%; }
+    #vipTable th:nth-child(7), #vipTable td:nth-child(7) { width: 9%; text-align: center; }
+    #vipTable th:nth-child(8), #vipTable td:nth-child(8) { width: 10%; text-align: center; }
+    #vipTable td:nth-child(2) { overflow-wrap: anywhere; }
+    #vipTable td:nth-child(3) .flex,
+    #vipTable td:nth-child(6) .flex,
+    #vipTable td:nth-child(8) .flex {
+      gap: 6px !important;
+    }
+    #vipTable select {
+      width: 100%;
+      min-width: 0;
+    }
+    @media (max-width: 900px) {
+      #vipTable {
+        width: 980px;
+        min-width: 980px;
+        table-layout: fixed;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen">
@@ -442,7 +478,7 @@
 
       <div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full text-right text-sm">
+          <table id="vipTable" class="text-right text-sm">
             <thead class="bg-amber-50 text-amber-950 text-xs font-bold">
               <tr>
                 <th class="p-3.5">#</th>
@@ -1266,7 +1302,12 @@
                 ${supportOptions}
               </select>
             </td>
-            <td class="p-3.5 font-extrabold text-blue-700">${(parseFloat(c.amount) || 0).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-extrabold text-blue-700">${(parseFloat(c.amount) || 0).toLocaleString('ar-EG')} ج.م</span>
+                <button type="button" class="vip-edit-amount-btn text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded-lg font-bold hover:bg-emerald-100" data-id="${escapeHtml(c.id)}">✏️ تعديل المبلغ</button>
+              </div>
+            </td>
             <td class="p-3.5 text-xs text-gray-500 font-semibold">${escapeHtml(c.date || '-')}</td>
             <td class="p-3.5 text-center">
               <div class="flex items-center justify-center gap-1.5">
@@ -1289,6 +1330,9 @@
         tbody.querySelectorAll('.vip-edit-name-btn').forEach(el => {
           el.addEventListener('click', () => editVipClientName(el.dataset.id));
         });
+        tbody.querySelectorAll('.vip-edit-amount-btn').forEach(el => {
+          el.addEventListener('click', () => editVipClientAmount(el.dataset.id));
+        });
         tbody.querySelectorAll('.vip-delete-btn').forEach(el => {
           el.addEventListener('click', () => deleteVipClient(el.dataset.id, el.dataset.name));
         });
@@ -1296,7 +1340,7 @@
 
       async function updateVipClientField(id, field, value) {
         if (!supabase || !canAccessVip()) return;
-        if (!['whatsapp_status', 'support_status', 'name'].includes(field)) return;
+        if (!['whatsapp_status', 'support_status', 'name', 'amount'].includes(field)) return;
 
         const oldClient = vipClients.find(c => String(c.id) === String(id));
         if (!oldClient) return;
@@ -1316,7 +1360,7 @@
             'VIP تعديل',
             currentUser ? currentUser.name : 'مستخدم VIP',
             oldClient.name || 'بدون اسم',
-            `${field === 'whatsapp_status' ? 'حالة واتساب' : field === 'support_status' ? 'دورية الدعم' : 'الاسم'}: ${oldValue || '-'} ← ${value}`
+            `${field === 'whatsapp_status' ? 'حالة واتساب' : field === 'support_status' ? 'دورية الدعم' : field === 'amount' ? 'المبلغ' : 'الاسم'}: ${oldValue || '-'} ← ${value}`
           );
         } catch (e) {
           oldClient[field] = oldValue;
@@ -1343,6 +1387,32 @@
         }
         if (cleanName === String(client.name || '').trim()) return;
         await updateVipClientField(id, 'name', cleanName);
+      }
+
+      async function editVipClientAmount(id) {
+        if (!canAccessVip()) {
+          alert('غير مصرح بتعديل بيانات VIP.');
+          return;
+        }
+        const client = vipClients.find(c => String(c.id) === String(id));
+        if (!client) return;
+
+        const currentAmount = parseFloat(client.amount) || 0;
+        const input = prompt('اكتب المبلغ الجديد بالجنيه:', String(currentAmount));
+        if (input === null) return;
+
+        const normalized = convertArabicDigits(String(input))
+          .replace(/[,،]/g, '')
+          .replace(/[^0-9.\-]/g, '');
+        const newAmount = parseFloat(normalized);
+
+        if (!Number.isFinite(newAmount) || newAmount < 0) {
+          alert('من فضلك اكتب مبلغ صحيح أكبر من أو يساوي صفر.');
+          return;
+        }
+        if (newAmount === currentAmount) return;
+
+        await updateVipClientField(id, 'amount', newAmount);
       }
 
       async function deleteVipClient(id, name) {
