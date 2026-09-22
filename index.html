@@ -142,7 +142,6 @@
       <!-- أزرار الأقسام (تظهر للأدمن فقط للتبديل) -->
       <div id="sectionSwitcherContainer" class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
         <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
-          <span>👨</span>
           <span>القسم الرجالي</span>
         </button>
         <button type="button" id="sectionWomenBtn" class="section-btn px-5 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
@@ -180,7 +179,7 @@
         <!-- إجمالي عملاء الشهر -->
         <div class="text-right w-full lg:w-auto">
           <div class="flex items-center gap-2 text-gray-800 font-bold text-lg md:text-xl">
-            <span class="text-xl" id="heroIcon">👨</span>
+            <span class="text-xl" id="heroIcon"></span>
             <h2 id="heroTitle">إحصائيات الشهر الحالي (القسم الرجالي)</h2>
             <span id="syncStatus" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2">🟢 متصل سحابياً</span>
           </div>
@@ -781,7 +780,7 @@
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">القسم المستهدف</label>
           <select id="clientCategory" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
-            <option value="men">القسم الرجالي 👨</option>
+            <option value="men">القسم الرجالي</option>
             <option value="women">قسم السيدات 🧕</option>
           </select>
         </div>
@@ -1228,7 +1227,7 @@
         if (category === 'women') {
           return '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🧕 نسائي</span>';
         }
-        return '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">👨 رجالي</span>';
+        return '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">رجالي</span>';
       }
 
       function getActionBadge(type) {
@@ -2967,7 +2966,7 @@
         document.getElementById('clientEmployeeCustom').style.display = 'none';
         document.getElementById('clientEmployeeCustom').value = '';
 
-        document.getElementById('modalTitle').innerText = currentSection === 'women' ? 'إضافة عميلة جديدة (قسم السيدات 🧕)' : 'إضافة عميل جديد (القسم الرجالي 👨)';
+        document.getElementById('modalTitle').innerText = currentSection === 'women' ? 'إضافة عميلة جديدة (قسم السيدات 🧕)' : 'إضافة عميل جديد (القسم الرجالي)';
         document.getElementById('clientModal').style.display = 'flex';
       }
 
@@ -3088,7 +3087,7 @@
 
         const titleEl = document.getElementById('monthlyModalTitle');
         if (titleEl) {
-          titleEl.innerText = currentSection === 'women' ? '📊 التقرير الشهري (قسم السيدات 🧕)' : '📊 التقرير الشهري (القسم الرجالي 👨)';
+          titleEl.innerText = currentSection === 'women' ? '📊 التقرير الشهري (قسم السيدات 🧕)' : '📊 التقرير الشهري (القسم الرجالي)';
         }
 
         selectPicker.value = currentYM;
@@ -3206,8 +3205,8 @@
           if (womBtn) womBtn.classList.remove('section-active');
           if (menBtn) menBtn.classList.add('section-active');
           if (heroStats) heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
-          if (heroTitle) heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي 👨)';
-          if (heroIcon) heroIcon.innerText = '👨';
+          if (heroTitle) heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي)';
+          if (heroIcon) heroIcon.innerText = '';
         }
 
         updateDashboardStats();
@@ -3941,7 +3940,7 @@
 
           const modalTitle = document.getElementById('employeeModalTitle');
           if (modalTitle) {
-            modalTitle.innerText = currentSection === 'women' ? '👥 تقرير أداء وتوزيع الموظفين (قسم السيدات 🧕)' : '👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي 👨)';
+            modalTitle.innerText = currentSection === 'women' ? '👥 تقرير أداء وتوزيع الموظفين (قسم السيدات 🧕)' : '👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي)';
           }
 
           const tbody = document.getElementById('employeeTableBody');
