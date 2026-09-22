@@ -426,7 +426,7 @@
               <h2 class="text-xl font-extrabold text-amber-900">قسم VIP</h2>
               <span id="vipSyncStatus" class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">خاص بالإدارة والمستخدم المصرح</span>
             </div>
-            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب ودورية الدعم/الدفع.</p>
+            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب وحالة الدعم.</p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
             <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
@@ -457,7 +457,7 @@
             <option value="">كل حالات واتساب</option>
           </select>
           <select id="vipSupportFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
-            <option value="">كل دوريات الدعم</option>
+            <option value="">كل حالات الدعم</option>
           </select>
           <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2">
             <span>🎯</span>
@@ -468,9 +468,10 @@
 
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="text-xs text-gray-500 font-semibold">
-            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، دورية الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
+            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، حالة الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
           </div>
           <div class="flex flex-wrap gap-2">
+            <button type="button" id="btnVipAddClient" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">➕ إضافة عميل VIP</button>
             <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع أي شيت VIP</button>
             <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
             <button type="button" id="btnVipSelectFiltered" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">☑️ تحديد النتائج الظاهرة</button>
@@ -491,7 +492,7 @@
                 <th class="p-3.5">الاسم</th>
                 <th class="p-3.5">الرقم</th>
                 <th class="p-3.5">التواصل واتس اب</th>
-                <th class="p-3.5">دورية الدعم</th>
+                <th class="p-3.5">حالة الدعم</th>
                 <th class="p-3.5">المبلغ</th>
                 <th class="p-3.5">تاريخ الإضافة</th>
                 <th class="p-3.5 text-center">إجراءات</th>
@@ -504,6 +505,64 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Modal: إضافة عميل VIP يدويًا -->
+  <div id="vipClientModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <div>
+          <h3 class="text-base font-extrabold text-amber-950">⭐ إضافة عميل VIP</h3>
+          <p class="text-[11px] text-gray-500 mt-1">أضف العميل يدويًا وسيظهر فورًا في القسم والإحصائيات.</p>
+        </div>
+        <button type="button" id="closeVipClientModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+
+      <form id="vipClientForm" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">اسم العميل</label>
+          <input type="text" id="vipClientName" required placeholder="مثال: أحمد محمد" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">رقم الهاتف / واتساب</label>
+          <input type="tel" id="vipClientPhone" required placeholder="01XXXXXXXXX" dir="ltr" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100 font-mono text-right">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">حالة التواصل واتساب</label>
+            <select id="vipClientWhatsAppStatus" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-amber-500 bg-white font-semibold">
+              <option value="لم يتم" selected>لم يتم</option>
+              <option value="تم">تم</option>
+              <option value="لم يرد">لم يرد</option>
+              <option value="متابعة">متابعة</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">حالة الدعم</label>
+            <select id="vipClientSupportStatus" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-amber-500 bg-white font-semibold">
+              <option value="غير محدد" selected>غير محدد</option>
+              <option value="شهري">شهري</option>
+              <option value="كل 3 شهور">كل 3 شهور</option>
+              <option value="كل 6 شهور">كل 6 شهور</option>
+              <option value="سنوي">سنوي</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">المبلغ المدفوع (ج.م)</label>
+          <input type="number" id="vipClientAmount" required min="0" step="any" value="0" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" id="cancelVipClientModalBtn" class="px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
+          <button type="submit" id="saveVipClientBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer">💾 حفظ العميل</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة كلمات السر لجميع الحسابات (الأدمن فقط) -->
@@ -1225,7 +1284,7 @@
 
         whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
           whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-        supportFilter.innerHTML = '<option value="">كل دوريات الدعم</option>' +
+        supportFilter.innerHTML = '<option value="">كل حالات الدعم</option>' +
           supportValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
         if (whatsappValues.includes(currentWhats)) whatsappFilter.value = currentWhats;
@@ -1479,7 +1538,7 @@
             'VIP تعديل',
             currentUser ? currentUser.name : 'مستخدم VIP',
             oldClient.name || 'بدون اسم',
-            `${field === 'whatsapp_status' ? 'حالة واتساب' : field === 'support_status' ? 'دورية الدعم' : field === 'amount' ? 'المبلغ' : 'الاسم'}: ${oldValue || '-'} ← ${value}`
+            `${field === 'whatsapp_status' ? 'حالة واتساب' : field === 'support_status' ? 'حالة الدعم' : field === 'amount' ? 'المبلغ' : 'الاسم'}: ${oldValue || '-'} ← ${value}`
           );
         } catch (e) {
           oldClient[field] = oldValue;
@@ -1487,6 +1546,107 @@
           updateVipDashboard();
           refreshVipFilterOptions();
           alert('تعذر تحديث بيانات VIP: ' + (e.message || e));
+        }
+      }
+
+      function openVipAddClientModal() {
+        if (!canAccessVip()) {
+          alert('غير مصرح بإضافة عملاء VIP.');
+          return;
+        }
+        const form = document.getElementById('vipClientForm');
+        if (form) form.reset();
+        const amountEl = document.getElementById('vipClientAmount');
+        const waEl = document.getElementById('vipClientWhatsAppStatus');
+        const supportEl = document.getElementById('vipClientSupportStatus');
+        if (amountEl) amountEl.value = '0';
+        if (waEl) waEl.value = 'لم يتم';
+        if (supportEl) supportEl.value = 'غير محدد';
+        const modal = document.getElementById('vipClientModal');
+        if (modal) modal.style.display = 'flex';
+        setTimeout(() => {
+          const nameEl = document.getElementById('vipClientName');
+          if (nameEl) nameEl.focus();
+        }, 50);
+      }
+
+      function closeVipAddClientModal() {
+        const modal = document.getElementById('vipClientModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      async function addVipClientManually(event) {
+        if (event) event.preventDefault();
+        if (!supabase || !canAccessVip()) {
+          alert('غير مصرح بإضافة عملاء VIP.');
+          return;
+        }
+
+        const nameEl = document.getElementById('vipClientName');
+        const phoneEl = document.getElementById('vipClientPhone');
+        const waEl = document.getElementById('vipClientWhatsAppStatus');
+        const supportEl = document.getElementById('vipClientSupportStatus');
+        const amountEl = document.getElementById('vipClientAmount');
+        const saveBtn = document.getElementById('saveVipClientBtn');
+
+        const name = String(nameEl ? nameEl.value : '').trim();
+        const phone = normalizePhoneNumber(phoneEl ? phoneEl.value : '');
+        const whatsappStatus = String(waEl ? waEl.value : 'لم يتم').trim() || 'لم يتم';
+        const supportStatus = String(supportEl ? supportEl.value : 'غير محدد').trim() || 'غير محدد';
+        const amount = parseVipAmount(amountEl ? amountEl.value : 0);
+
+        if (!name) return alert('اكتب اسم العميل.');
+        if (!phone || phone.replace(/\D/g, '').length < 8) return alert('اكتب رقم هاتف صحيح.');
+        if (!Number.isFinite(amount) || amount < 0) return alert('اكتب مبلغ صحيح أكبر من أو يساوي صفر.');
+
+        const duplicate = vipClients.find(c => normalizePhoneNumber(c.phone || '') === phone);
+        if (duplicate) {
+          return alert(`الرقم ${phone} مسجل بالفعل باسم: ${duplicate.name || 'بدون اسم'}`);
+        }
+
+        const payload = {
+          name,
+          phone,
+          whatsapp_status: whatsappStatus,
+          support_status: supportStatus,
+          amount,
+          date: new Date().toISOString().split('T')[0]
+        };
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerText = '⏳ جاري الحفظ...';
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from('vip_clients')
+            .insert([payload])
+            .select('*')
+            .single();
+          if (error) throw error;
+
+          if (data) vipClients.unshift(data);
+          else await fetchVipClientsFromCloud();
+
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          closeVipAddClientModal();
+
+          logActivity(
+            'VIP إضافة عميل',
+            currentUser ? currentUser.name : 'مستخدم VIP',
+            name,
+            `تمت إضافة عميل VIP يدويًا - الهاتف: ${phone} - المبلغ: ${amount}`
+          );
+        } catch (e) {
+          alert('تعذر إضافة عميل VIP: ' + (e.message || e));
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = '💾 حفظ العميل';
+          }
         }
       }
 
@@ -2011,7 +2171,7 @@
           'الاسم': c.name || '',
           'الرقم': normalizePhoneNumber(c.phone || ''),
           'التواصل واتس اب': c.whatsapp_status || '',
-          'دورية الدعم': c.support_status || '',
+          'حالة الدعم': c.support_status || '',
           'المبلغ': c.amount || 0,
           'تاريخ الإضافة': c.date || ''
         }));
@@ -3239,6 +3399,7 @@
         const vipSearchInput = document.getElementById('vipSearchInput');
         const vipWhatsAppFilter = document.getElementById('vipWhatsAppFilter');
         const vipSupportFilter = document.getElementById('vipSupportFilter');
+        const btnVipAddClient = document.getElementById('btnVipAddClient');
         const btnVipImport = document.getElementById('btnVipImport');
         const vipFileInput = document.getElementById('vipFileInput');
         const btnVipExport = document.getElementById('btnVipExport');
@@ -3251,6 +3412,23 @@
         if (vipSearchInput) vipSearchInput.addEventListener('input', renderVipTable);
         if (vipWhatsAppFilter) vipWhatsAppFilter.addEventListener('change', renderVipTable);
         if (vipSupportFilter) vipSupportFilter.addEventListener('change', renderVipTable);
+        if (btnVipAddClient) btnVipAddClient.addEventListener('click', openVipAddClientModal);
+
+        const vipClientForm = document.getElementById('vipClientForm');
+        const closeVipClientModalBtn = document.getElementById('closeVipClientModalBtn');
+        const cancelVipClientModalBtn = document.getElementById('cancelVipClientModalBtn');
+        const vipClientModal = document.getElementById('vipClientModal');
+        const vipClientPhone = document.getElementById('vipClientPhone');
+        if (vipClientForm) vipClientForm.addEventListener('submit', addVipClientManually);
+        if (closeVipClientModalBtn) closeVipClientModalBtn.addEventListener('click', closeVipAddClientModal);
+        if (cancelVipClientModalBtn) cancelVipClientModalBtn.addEventListener('click', closeVipAddClientModal);
+        if (vipClientModal) vipClientModal.addEventListener('click', function(e) {
+          if (e.target === vipClientModal) closeVipAddClientModal();
+        });
+        if (vipClientPhone) vipClientPhone.addEventListener('blur', function() {
+          this.value = normalizePhoneNumber(this.value);
+        });
+
         if (btnVipImport) btnVipImport.addEventListener('click', () => {
           if (!canAccessVip()) return alert('غير مصرح بالدخول لقسم VIP.');
           vipFileInput.click();
