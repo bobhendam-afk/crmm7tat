@@ -431,10 +431,10 @@
 
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="text-xs text-gray-500 font-semibold">
-            أعمدة الشيت المدعومة: <span class="font-bold text-gray-700">الاسم، الرقم، التواصل واتس اب، حالة الدعم، المبلغ</span>
+            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، حالة الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
           </div>
           <div class="flex flex-wrap gap-2">
-            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع شيت VIP</button>
+            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع أي شيت VIP</button>
             <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
           </div>
         </div>
@@ -1389,6 +1389,281 @@
         }
       }
 
+      // ================= استيراد VIP الذكي =================
+      // الفكرة: المستخدم يرفع Excel/CSV بأي ترتيب للأعمدة تقريباً،
+      // والنظام يكتشف صف العناوين والأعمدة من الاسم أو من شكل البيانات نفسها.
+      function normalizeVipText(value) {
+        return String(value ?? '')
+          .trim()
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u064B-\u065F\u0670]/g, '')
+          .replace(/[أإآ]/g, 'ا')
+          .replace(/ة/g, 'ه')
+          .replace(/ى/g, 'ي')
+          .replace(/[ـ]/g, '')
+          .replace(/[\s_\-\/\\().:،؛|]+/g, '')
+          .replace(/[^\p{L}\p{N}]/gu, '');
+      }
+
+      function convertArabicDigits(value) {
+        const arabic = '٠١٢٣٤٥٦٧٨٩';
+        const persian = '۰۱۲۳۴۵۶۷۸۹';
+        return String(value ?? '')
+          .replace(/[٠-٩]/g, d => String(arabic.indexOf(d)))
+          .replace(/[۰-۹]/g, d => String(persian.indexOf(d)));
+      }
+
+      const VIP_HEADER_ALIASES = {
+        name: [
+          'الاسم','اسم','اسمالعميل','اسم العميل','اسم المشترك','اسمالمشترك','اسم الطالب','اسمالطالب',
+          'name','fullname','clientname','customername','studentname','participantname','customer'
+        ],
+        phone: [
+          'الرقم','رقم','رقم الهاتف','رقمالهاتف','الهاتف','الموبايل','موبايل','المحمول','رقم المحمول',
+          'رقم الواتساب','رقمالواتساب','واتساب','whatsapp','whatsappnumber','phone','phonenumber','mobile','mobilenumber','tel','telephone'
+        ],
+        whatsapp_status: [
+          'التواصل واتس اب','التواصل واتساب','التواصلواتساب','حالة التواصل واتس اب','حالة التواصل واتساب',
+          'حاله التواصل واتس اب','حاله التواصل واتساب','حالة الواتس','حاله الواتس','حالة التواصل','حاله التواصل',
+          'whatsappstatus','contactstatus','communicationstatus','whatsappcontact','followupstatus'
+        ],
+        support_status: [
+          'حالة الدعم','حاله الدعم','الدعم','حالة دعم','حاله دعم','supportstatus','support','servicestatus','casestatus'
+        ],
+        amount: [
+          'المبلغ','مبلغ','المبلغ المدفوع','المبلغالمدفوع','المدفوع','تم الدفع','المبلغ المحصل','المبلغالمحصل',
+          'القيمة','قيمه','السعر','amount','paid','payment','price','value','revenue','totalpaid'
+        ],
+        date: [
+          'التاريخ','تاريخ','تاريخ الاضافة','تاريخالإضافة','تاريخ التسجيل','تاريخالتسجيل','date','createdat','createddate'
+        ]
+      };
+
+      const VIP_NORMALIZED_ALIASES = Object.fromEntries(
+        Object.entries(VIP_HEADER_ALIASES).map(([key, values]) => [key, new Set(values.map(normalizeVipText))])
+      );
+
+      function getVipHeaderField(value) {
+        const n = normalizeVipText(value);
+        if (!n) return null;
+        for (const [field, aliases] of Object.entries(VIP_NORMALIZED_ALIASES)) {
+          if (aliases.has(n)) return field;
+        }
+        // مطابقة مرنة للعناوين الطويلة أو المختلفة قليلاً
+        if ((n.includes('واتساب') || n.includes('whatsapp')) && (n.includes('حاله') || n.includes('status') || n.includes('تواصل') || n.includes('contact'))) return 'whatsapp_status';
+        if ((n.includes('دعم') || n.includes('support')) && (n.includes('حاله') || n.includes('status') || n === 'الدعم' || n === 'support')) return 'support_status';
+        if (n.includes('مبلغ') || n.includes('مدفوع') || n.includes('amount') || n.includes('payment') || n.includes('price')) return 'amount';
+        if (n.includes('هاتف') || n.includes('موبايل') || n.includes('محمول') || n.includes('phone') || n.includes('mobile') || (n.includes('واتساب') && !n.includes('حاله') && !n.includes('status') && !n.includes('تواصل'))) return 'phone';
+        if (n.includes('اسم') || n === 'name' || n.includes('fullname') || n.includes('clientname') || n.includes('customername')) return 'name';
+        if (n.includes('تاريخ') || n === 'date' || n.includes('created')) return 'date';
+        if (n === 'status' || n === 'الحاله' || n === 'حاله') return 'whatsapp_status';
+        return null;
+      }
+
+      function scoreVipHeaderRow(row) {
+        const fields = new Set();
+        (row || []).forEach(cell => {
+          const field = getVipHeaderField(cell);
+          if (field) fields.add(field);
+        });
+        let score = fields.size * 3;
+        if (fields.has('phone')) score += 3;
+        if (fields.has('name')) score += 2;
+        if (fields.has('amount')) score += 1;
+        return { score, fields };
+      }
+
+      function findVipHeaderRow(matrix) {
+        let best = { index: -1, score: 0, fields: new Set() };
+        const maxRows = Math.min(matrix.length, 25);
+        for (let i = 0; i < maxRows; i++) {
+          const current = scoreVipHeaderRow(matrix[i]);
+          if (current.score > best.score) best = { index: i, ...current };
+        }
+        // صف عناوين موثوق لو عرفنا على الأقل عمودين، أو الهاتف + عمود آخر
+        if (best.fields.size >= 2 || (best.fields.has('phone') && best.score >= 6)) return best.index;
+        return -1;
+      }
+
+      function isVipPhoneLike(value) {
+        const digits = convertArabicDigits(value).replace(/\D/g, '');
+        if (digits.length < 8 || digits.length > 15) return false;
+        // نستبعد أرقام المبالغ القصيرة والتواريخ قدر الإمكان
+        return /^((00)?20)?01[0125]\d{8}$/.test(digits) || /^\d{10,15}$/.test(digits);
+      }
+
+      function parseVipAmount(value) {
+        if (value === null || value === undefined || value === '') return 0;
+        let s = convertArabicDigits(value)
+          .replace(/[٬,](?=\d{3}(\D|$))/g, '')
+          .replace(/٫/g, '.')
+          .replace(/[^0-9.\-]/g, '');
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function isVipAmountLike(value) {
+        const s = convertArabicDigits(value).trim();
+        if (!s || isVipPhoneLike(s)) return false;
+        return /^\s*[-+]?\d[\d\s,٬]*(?:[.٫]\d+)?\s*(?:ج\.?م|جنيه|egp|ريال|sar|aed)?\s*$/i.test(s);
+      }
+
+      function normalizeVipWhatsappStatus(value) {
+        const raw = String(value ?? '').trim();
+        if (!raw) return 'لم يتم';
+        const n = normalizeVipText(raw);
+        if (n.includes('لميرد') || n.includes('noanswer') || n.includes('noreply')) return 'لم يرد';
+        if (n.includes('متابعه') || n.includes('تذكير') || n.includes('followup') || n.includes('reminder')) return 'متابعة';
+        if (n.includes('لميتم') || n.includes('notcontacted') || n.includes('pending') || n === 'لا' || n === 'no') return 'لم يتم';
+        if (n === 'تم' || n.includes('تمالتواصل') || n.includes('contacted') || n.includes('done') || n.includes('completed') || n === 'yes' || n === 'نعم') return 'تم';
+        return raw;
+      }
+
+      function looksLikeVipWhatsappStatus(value) {
+        const n = normalizeVipText(value);
+        if (!n) return false;
+        const tokens = ['تم','تمالتواصل','لميتم','لميرد','متابعه','تذكير','contacted','notcontacted','noanswer','followup','reminder','pending','done'];
+        return tokens.some(t => n === t || n.includes(t));
+      }
+
+      function looksLikeVipSupportStatus(value) {
+        const n = normalizeVipText(value);
+        if (!n) return false;
+        const tokens = ['جديد','جار','جاري','متابعه','مكتمل','مغلق','معلق','تمالحل','تمالدعم','يحتاجدعم','لاتوجدمشكله','open','closed','resolved','new','active','pending','support'];
+        return tokens.some(t => n === t || n.includes(t));
+      }
+
+      function inferVipColumnMap(dataRows, maxCols) {
+        const stats = [];
+        const sampleRows = dataRows.filter(r => (r || []).some(v => String(v ?? '').trim() !== '')).slice(0, 120);
+
+        for (let col = 0; col < maxCols; col++) {
+          const vals = sampleRows.map(r => r[col]).filter(v => String(v ?? '').trim() !== '');
+          const total = vals.length || 1;
+          let phone = 0, amount = 0, wa = 0, support = 0, text = 0, unique = new Set();
+          vals.forEach(v => {
+            const str = String(v ?? '').trim();
+            unique.add(normalizeVipText(str));
+            if (isVipPhoneLike(str)) phone++;
+            if (isVipAmountLike(str)) amount++;
+            if (looksLikeVipWhatsappStatus(str)) wa++;
+            if (looksLikeVipSupportStatus(str)) support++;
+            if (/\p{L}/u.test(str) && !looksLikeVipWhatsappStatus(str) && !looksLikeVipSupportStatus(str)) text++;
+          });
+          stats.push({
+            col,
+            count: vals.length,
+            phone: phone / total,
+            amount: amount / total,
+            wa: wa / total,
+            support: support / total,
+            text: text / total,
+            uniqueness: unique.size / total
+          });
+        }
+
+        const map = {};
+        const used = new Set();
+        const pick = (field, metric, minScore) => {
+          const candidates = stats.filter(s => !used.has(s.col) && s.count > 0).sort((a,b) => b[metric] - a[metric]);
+          if (candidates[0] && candidates[0][metric] >= minScore) {
+            map[field] = candidates[0].col;
+            used.add(candidates[0].col);
+          }
+        };
+
+        pick('phone', 'phone', 0.45);
+        pick('whatsapp_status', 'wa', 0.35);
+        pick('support_status', 'support', 0.35);
+        pick('amount', 'amount', 0.55);
+
+        // الاسم: عمود نصي متنوع، مع استبعاد أعمدة الحالات
+        const nameCandidates = stats
+          .filter(s => !used.has(s.col) && s.count > 0)
+          .map(s => ({ ...s, nameScore: (s.text * 0.75) + (s.uniqueness * 0.25) }))
+          .sort((a,b) => b.nameScore - a.nameScore);
+        if (nameCandidates[0] && nameCandidates[0].nameScore >= 0.5) {
+          map.name = nameCandidates[0].col;
+          used.add(nameCandidates[0].col);
+        }
+
+        return map;
+      }
+
+      function buildVipMapFromHeader(headerRow, dataRows) {
+        const map = {};
+        (headerRow || []).forEach((cell, idx) => {
+          const field = getVipHeaderField(cell);
+          if (field && map[field] === undefined) map[field] = idx;
+        });
+
+        const maxCols = Math.max(
+          (headerRow || []).length,
+          ...dataRows.slice(0, 50).map(r => (r || []).length),
+          0
+        );
+        const inferred = inferVipColumnMap(dataRows, maxCols);
+        Object.entries(inferred).forEach(([field, idx]) => {
+          if (map[field] === undefined) map[field] = idx;
+        });
+        return map;
+      }
+
+      function extractVipRowsFromWorksheet(worksheet, sheetName, todayStr) {
+        const matrix = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          defval: '',
+          raw: false,
+          blankrows: false
+        });
+        if (!matrix || matrix.length === 0) return { rows: [], detected: {}, skipped: 0 };
+
+        const headerIndex = findVipHeaderRow(matrix);
+        const dataRows = headerIndex >= 0 ? matrix.slice(headerIndex + 1) : matrix;
+        const headerRow = headerIndex >= 0 ? matrix[headerIndex] : [];
+        const map = buildVipMapFromHeader(headerRow, dataRows);
+        const get = (row, field) => map[field] !== undefined ? row[map[field]] : '';
+        const result = [];
+        let skipped = 0;
+
+        dataRows.forEach(row => {
+          if (!row || !row.some(v => String(v ?? '').trim() !== '')) return;
+
+          // نتجاهل لو صف عناوين اتكرر في منتصف الشيت
+          if (scoreVipHeaderRow(row).fields.size >= 2) return;
+
+          const rawName = get(row, 'name');
+          const rawPhone = get(row, 'phone');
+          const phone = normalizePhoneNumber(convertArabicDigits(rawPhone));
+          const name = String(rawName || '').trim();
+
+          // لو مفيش اسم ولا رقم، الصف مالوش معنى كعميل
+          if (!name && !phone) {
+            skipped++;
+            return;
+          }
+
+          const whatsappStatus = normalizeVipWhatsappStatus(get(row, 'whatsapp_status'));
+          const supportRaw = String(get(row, 'support_status') || '').trim();
+          const supportStatus = supportRaw || 'جديد';
+          const amount = parseVipAmount(get(row, 'amount'));
+          const rawDate = String(get(row, 'date') || '').trim();
+
+          result.push({
+            name: name || 'عميل VIP',
+            phone,
+            whatsapp_status: whatsappStatus,
+            support_status: supportStatus,
+            amount,
+            date: rawDate || todayStr,
+            _sheet: sheetName
+          });
+        });
+
+        return { rows: result, detected: map, skipped };
+      }
+
       async function importVipFile(file) {
         if (!file || !supabase || !canAccessVip()) return;
 
@@ -1396,49 +1671,56 @@
         reader.onload = async function(evt) {
           try {
             const bytes = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(bytes, { type: 'array' });
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const workbook = XLSX.read(bytes, { type: 'array', cellDates: true });
             const todayStr = new Date().toISOString().split('T')[0];
 
-            const existingPhones = new Set(vipClients.map(c => normalizePhoneNumber(c.phone)).filter(Boolean));
-            const seen = new Set();
+            // بنقرأ كل الـSheets مش أول Sheet بس
+            let extracted = [];
+            let skippedRows = 0;
+            const detectedSheets = [];
+
+            workbook.SheetNames.forEach(sheetName => {
+              const worksheet = workbook.Sheets[sheetName];
+              const parsed = extractVipRowsFromWorksheet(worksheet, sheetName, todayStr);
+              extracted = extracted.concat(parsed.rows);
+              skippedRows += parsed.skipped;
+              if (parsed.rows.length) detectedSheets.push(sheetName);
+            });
+
+            const existingPhones = new Set(
+              vipClients.map(c => normalizePhoneNumber(convertArabicDigits(c.phone))).filter(Boolean)
+            );
+            const seenPhones = new Set();
+            const seenNameOnly = new Set();
             const rows = [];
             let duplicateCount = 0;
 
-            jsonData.forEach(row => {
-              const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
-              const phone = normalizePhoneNumber(
-                row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || row['الموبايل'] || row['رقم الواتساب'] || ''
-              );
-              const whatsappStatus = String(
-                row['التواصل واتس اب'] || row['التواصل واتساب'] || row['حالة التواصل واتس اب'] || row['حالة الواتس'] || row['WhatsApp Status'] || row['Whatsapp Status'] || 'لم يتم'
-              ).trim() || 'لم يتم';
-              const supportStatus = String(
-                row['حالة الدعم'] || row['الدعم'] || row['Support Status'] || row['Support'] || 'جديد'
-              ).trim() || 'جديد';
-              const amountRaw = row['المبلغ'] || row['المبلغ المدفوع'] || row['Amount'] || 0;
-              const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
+            extracted.forEach(row => {
+              const phone = normalizePhoneNumber(convertArabicDigits(row.phone));
+              const normalizedName = normalizeVipText(row.name);
 
-              if (!name && !phone) return;
-              if (phone && (existingPhones.has(phone) || seen.has(phone))) {
-                duplicateCount++;
-                return;
+              if (phone) {
+                if (existingPhones.has(phone) || seenPhones.has(phone)) {
+                  duplicateCount++;
+                  return;
+                }
+                seenPhones.add(phone);
+              } else {
+                // لو مفيش رقم، نمنع تكرار نفس الاسم داخل نفس الملف فقط
+                if (normalizedName && seenNameOnly.has(normalizedName)) {
+                  duplicateCount++;
+                  return;
+                }
+                if (normalizedName) seenNameOnly.add(normalizedName);
               }
-              if (phone) seen.add(phone);
 
-              rows.push({
-                name: String(name || 'عميل VIP').trim(),
-                phone,
-                whatsapp_status: whatsappStatus,
-                support_status: supportStatus,
-                amount,
-                date: todayStr
-              });
+              const cleanRow = { ...row, phone };
+              delete cleanRow._sheet;
+              rows.push(cleanRow);
             });
 
             if (rows.length === 0) {
-              alert(`لم يتم العثور على بيانات VIP جديدة. المكرر: ${duplicateCount.toLocaleString('ar-EG')}`);
+              alert(`لم يتم العثور على بيانات VIP جديدة قابلة للاستيراد.\nالمكرر: ${duplicateCount.toLocaleString('ar-EG')}\nالصفوف المتجاهلة: ${skippedRows.toLocaleString('ar-EG')}`);
               return;
             }
 
@@ -1453,13 +1735,20 @@
               'VIP استيراد',
               currentUser ? currentUser.name : 'النظام',
               `${rows.length} عميل VIP`,
-              `تم رفع ${rows.length} عميل VIP وتخطي ${duplicateCount} مكرر`
+              `استيراد ذكي من ${detectedSheets.length || workbook.SheetNames.length} Sheet: تم رفع ${rows.length} وتخطي ${duplicateCount} مكرر و${skippedRows} صف غير صالح`
             );
-            alert(`✅ تم رفع ${rows.length.toLocaleString('ar-EG')} عميل VIP.\n🧹 تم تخطي ${duplicateCount.toLocaleString('ar-EG')} رقم مكرر.`);
+
+            alert(
+              `✅ تم استيراد الشيت تلقائياً بنجاح.\n` +
+              `👥 تم إضافة: ${rows.length.toLocaleString('ar-EG')} عميل VIP\n` +
+              `🧹 تم تخطي المكرر: ${duplicateCount.toLocaleString('ar-EG')}\n` +
+              `↪️ صفوف غير صالحة/فارغة: ${skippedRows.toLocaleString('ar-EG')}\n` +
+              `📄 تم فحص: ${workbook.SheetNames.length.toLocaleString('ar-EG')} Sheet`
+            );
             await fetchVipClientsFromCloud();
           } catch (e) {
-            console.error('VIP import error:', e);
-            alert('تعذر رفع شيت VIP: ' + (e.message || e));
+            console.error('VIP smart import error:', e);
+            alert('تعذر قراءة شيت VIP تلقائياً: ' + (e.message || e));
           }
         };
         reader.readAsArrayBuffer(file);
