@@ -1,0 +1,3261 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة وتواصل العملاء | Cloud CRM Pro</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- XLSX Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- خط Cairo -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+    .active-tab {
+      color: #2563eb !important;
+      border-bottom: 3px solid #2563eb !important;
+      font-weight: 700 !important;
+    }
+    .row-selected {
+      background-color: #eff6ff !important;
+    }
+    .section-active {
+      background-color: #ffffff !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+      color: #1e293b !important;
+      font-weight: 800 !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen">
+
+  <!-- ================= 1. شاشة تسجيل الدخول الرئيسية ================= -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-gray-100">
+      
+      <!-- شعار وعنوان الدخول -->
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl mb-3 shadow-lg shadow-blue-500/30 font-bold">
+          ⚡
+        </div>
+        <h2 class="text-xl font-extrabold text-gray-900">نظام إدارة وتواصل العملاء</h2>
+        <p class="text-xs text-gray-500 mt-1 font-semibold">Cloud CRM Pro | تسجيل الدخول للنظام</p>
+      </div>
+
+      <!-- تنبيه خطأ تسجيل الدخول -->
+      <div id="loginErrorAlert" class="bg-red-50 border border-red-200 text-red-700 text-xs font-bold p-3 rounded-xl mb-4 text-center" style="display: none;">
+      </div>
+
+      <!-- نموذج تسجيل الدخول -->
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1.5">اسم المستخدم</label>
+          <div class="relative">
+            <input type="text" id="loginUsername" required placeholder="أدخل اسم المستخدم" autocomplete="username"
+                   class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium">
+            <span class="absolute left-3 top-3.5 text-gray-400 text-sm">👤</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1.5">كلمة المرور</label>
+          <div class="relative">
+            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password"
+                   class="w-full border border-gray-200 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono tracking-wider">
+            <span class="absolute left-3 top-3.5 text-gray-400 text-sm">🔒</span>
+          </div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition cursor-pointer mt-2">
+          تسجيل الدخول للمنظومة 🚀
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= 2. واجهة النظام الرئيسية ================= -->
+  <div id="mainApp" class="max-w-7xl mx-auto space-y-5" style="display: none;">
+
+    <!-- عنصر رفع الملفات -->
+    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+
+    <!-- شريط الإجراءات الجماعية العائم (Bulk Actions Bar) -->
+    <div id="bulkActionsBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-4 transition-all duration-300 transform translate-y-24 opacity-0 pointer-events-none">
+      <span class="text-sm font-semibold flex items-center gap-2">
+        <span class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded-full font-bold" id="selectedCountBadge">0</span>
+        <span>عملاء محددين</span>
+      </span>
+      <div class="h-4 w-[1px] bg-gray-700"></div>
+      <button type="button" id="btnBulkDelete" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition cursor-pointer">
+        <span>🗑️</span>
+        <span>حذف المحددين</span>
+      </button>
+      <button type="button" id="btnBulkCancel" class="text-gray-400 hover:text-white text-xs font-semibold px-2 py-1 transition cursor-pointer">
+        إلغاء التحديد
+      </button>
+    </div>
+
+    <!-- شريط معلومات المستخدم والتبديل بين الأقسام وتسجيل الخروج -->
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+      
+      <!-- أزرار الأقسام (تظهر للأدمن فقط للتبديل) -->
+      <div id="sectionSwitcherContainer" class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+        <button type="button" id="sectionMenBtn" class="section-btn section-active px-5 py-2 rounded-lg text-xs font-bold text-gray-700 transition flex items-center gap-2 cursor-pointer">
+          <span>👨</span>
+          <span>القسم الرجالي</span>
+        </button>
+        <button type="button" id="sectionWomenBtn" class="section-btn px-5 py-2 rounded-lg text-xs font-bold text-gray-600 transition flex items-center gap-2 cursor-pointer hover:text-pink-600">
+          <span>🧕</span>
+          <span>قسم السيدات</span>
+        </button>
+        <button type="button" id="sectionVipBtn" class="section-btn px-5 py-2 rounded-lg text-xs font-bold text-amber-700 transition flex items-center gap-2 cursor-pointer hover:text-amber-900" style="display: none;">
+          <span>⭐</span>
+          <span>قسم VIP</span>
+        </button>
+      </div>
+
+      <!-- معلومات الحساب النشط حالياً وزر تسجيل الخروج -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span class="text-gray-500 font-semibold">المستخدم:</span>
+          <span class="font-bold text-gray-900" id="currentUserNameDisplay">-</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" id="currentUserRoleBadge">-</span>
+        </div>
+
+        <button type="button" id="btnLogout" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+          <span>🚪</span>
+          <span>خروج</span>
+        </button>
+      </div>
+
+    </div>
+
+    <div id="standardCRMSection" class="space-y-5">
+    <!-- 1. قسم إحصائيات الشهر الحالي -->
+    <div class="bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm" id="heroStatsContainer">
+      <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+        
+        <!-- إجمالي عملاء الشهر -->
+        <div class="text-right w-full lg:w-auto">
+          <div class="flex items-center gap-2 text-gray-800 font-bold text-lg md:text-xl">
+            <span class="text-xl" id="heroIcon">👨</span>
+            <h2 id="heroTitle">إحصائيات الشهر الحالي (القسم الرجالي)</h2>
+            <span id="syncStatus" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2">🟢 متصل سحابياً</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-4xl md:text-5xl font-extrabold text-blue-600" id="heroMonthTotal">0</div>
+            <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي عملاء هذا الشهر</div>
+          </div>
+        </div>
+
+        <!-- نسبة النجاح والرسم الدائري -->
+        <div class="flex flex-col items-center justify-center">
+          <div class="relative flex items-center justify-center">
+            <div id="progressRing" class="w-28 h-28 rounded-full flex items-center justify-center shadow-inner" 
+                 style="background: conic-gradient(#10b981 0deg, #e2e8f0 0deg);">
+              <div class="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                <span class="text-xl font-bold text-gray-800" id="heroSuccessRate">0%</span>
+                <span class="text-[10px] text-gray-400 font-medium">نسبة التواصل</span>
+              </div>
+            </div>
+          </div>
+          <span class="text-xs text-gray-500 font-medium mt-2" id="heroSuccessDetails">من إجمالي أرقام الشهر</span>
+        </div>
+
+        <!-- الحالات الأربعة والتاريخ -->
+        <div class="w-full lg:w-72 space-y-2">
+          <div class="text-left text-xs font-bold text-gray-500 mb-3" id="currentDateLabel">-</div>
+          
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-transparent text-sm">
+            <span class="text-gray-700 font-medium">تم التواصل</span>
+            <span class="font-bold text-emerald-600 text-base" id="pillDone">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-red-50 text-sm border border-red-100">
+            <span class="text-gray-700 font-medium">لم يرد</span>
+            <span class="font-bold text-red-500 text-base" id="pillNoAnswer">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-amber-50 text-sm border border-amber-100">
+            <span class="text-gray-700 font-medium">لم يتم</span>
+            <span class="font-bold text-amber-500 text-base" id="pillPending">0</span>
+          </div>
+
+          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-blue-50 text-sm border border-blue-100">
+            <span class="text-gray-700 font-medium">تذكير</span>
+            <span class="font-bold text-blue-500 text-base" id="pillReminder">0</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. بطاقات الإحصائيات الأربعة -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-gray-800" id="cardTotal">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي العملاء بالقسم</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-emerald-500" id="cardDone">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">تم التواصل</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-amber-500" id="cardPending">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">في الانتظار</div>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm text-center">
+        <div class="text-3xl md:text-4xl font-extrabold text-blue-600" id="cardRevenue">0</div>
+        <div class="text-xs text-gray-500 font-semibold mt-1">إجمالي المبالغ</div>
+      </div>
+    </div>
+
+    <!-- 3. شريط البحث والتبويبات والأزرار -->
+    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_220px_220px_170px] gap-2">
+        <div class="relative">
+          <input type="text" id="searchInput" placeholder="بحث سريع في بيانات هذا القسم (الاسم، الرقم، الموظف، الملاحظات)..." 
+                 class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+        </div>
+
+        <div class="relative">
+          <select id="amountFilter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="">كل المبالغ</option>
+            <option value="100">100 ج.م</option>
+            <option value="200">200 ج.م</option>
+            <option value="300">300 ج.م</option>
+            <option value="400">400 ج.م</option>
+            <option value="500">500 ج.م</option>
+            <option value="600">600 ج.م</option>
+            <option value="700">700 ج.م</option>
+            <option value="800">800 ج.م</option>
+            <option value="900">900 ج.م</option>
+            <option value="1000">1000 ج.م</option>
+            <option value="2000">2000 ج.م</option>
+            <option value="3000">3000 ج.م</option>
+            <option value="4000">4000 ج.م</option>
+            <option value="5000">5000 ج.م</option>
+          </select>
+          <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">💰</span>
+        </div>
+
+        <div class="relative">
+          <select id="statusFilter" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-9 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="">كل حالات التواصل</option>
+            <option value="تم">تم التواصل</option>
+            <option value="لم يتم">لم يتم التواصل</option>
+            <option value="لم يرد">لم يرد</option>
+            <option value="تذكير">تذكير</option>
+          </select>
+          <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">☎️</span>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2 min-h-[42px]">
+          <span class="text-lg">🎯</span>
+          <div class="leading-tight">
+            <div class="flex items-baseline gap-1">
+              <span id="filteredResultsCount" class="text-xl font-extrabold text-blue-700">0</span>
+              <span class="text-xs font-bold text-blue-800">عميل</span>
+            </div>
+            <div id="filteredResultsMeta" class="text-[10px] text-blue-600 font-semibold">نتيجة مطابقة</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+        
+        <!-- التبويبات -->
+        <div class="flex items-center gap-6 text-sm font-semibold text-gray-500 overflow-x-auto pb-1">
+          <button type="button" id="tab-all" class="tab-btn active-tab pb-1 transition cursor-pointer">الكل</button>
+          <button type="button" id="tab-done" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">تم</button>
+          <button type="button" id="tab-pending" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">لم يتم</button>
+          <button type="button" id="tab-noanswer" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">لم يرد</button>
+          <button type="button" id="tab-reminder" class="tab-btn pb-1 hover:text-gray-800 transition cursor-pointer">تذكير</button>
+        </div>
+
+        <!-- الأزرار التفاعلية -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- زر سجل الأدمن (يظهر للأدمن فقط) -->
+          <button type="button" id="btnAdminHistory" class="bg-slate-900 hover:bg-black text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-slate-700">
+            <span>🛡️</span>
+            <span>لوحة الأدمن وإدارة الحسابات</span>
+          </button>
+
+          <!-- زر حذف الأرقام المكررة تلقائياً -->
+          <button type="button" id="btnRemoveDuplicates" class="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>🧹</span>
+            <span>حذف المكررات تلقائياً</span>
+          </button>
+
+          <button type="button" id="btnEmployeeStats" class="bg-[#0284c7] hover:bg-[#0369a1] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>👥</span>
+            <span>إحصائيات الموظفين</span>
+          </button>
+
+          <button type="button" id="btnImport" class="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>📥</span>
+            <span>استيراد بيانات</span>
+          </button>
+
+          <button type="button" id="btnExport" class="bg-[#0f766e] hover:bg-[#115e59] text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>⬇️</span>
+            <span>تنزيل بيانات القسم</span>
+          </button>
+
+          <button type="button" id="btnMonthlyReport" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+            <span>📊</span>
+            <span>التقرير الشهري التفصيلي</span>
+          </button>
+
+          <button type="button" id="btnAddClient" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
+            + إضافة عميل
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4. جدول البيانات مع نظام التصفح والصفحات -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-sm">
+          <thead class="bg-gray-50 text-gray-600 text-xs font-semibold">
+            <tr>
+              <th class="p-3.5 w-10 text-center">
+                <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 text-blue-600 rounded cursor-pointer">
+              </th>
+              <th class="p-3.5">#</th>
+              <th class="p-3.5">اسم العميل</th>
+              <th class="p-3.5">رقم الهاتف (كامل)</th>
+              <th class="p-3.5">المبلغ</th>
+              <th class="p-3.5">الفئة</th>
+              <th class="p-3.5">القسم</th>
+              <th class="p-3.5">حالة التواصل</th>
+              <th class="p-3.5">آخر تواصل</th>
+              <th class="p-3.5">الموظف المسؤول</th>
+              <th class="p-3.5">تاريخ الإضافة</th>
+              <th class="p-3.5">الملاحظات</th>
+              <th class="p-3.5 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+
+      <div id="emptyState" class="text-center py-12 text-gray-400" style="display: none;">
+        لا توجد بيانات مطابقة حالياً في هذا القسم.
+      </div>
+
+      <!-- شريط الصفحات والتنقل (Pagination Bar) -->
+      <div class="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+        <div class="flex items-center gap-3 text-xs text-gray-600">
+          <span>عرض</span>
+          <select id="pageSizeSelect" class="border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none text-xs font-semibold focus:border-blue-500 cursor-pointer">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+          </select>
+          <span>سجل لكل صفحة</span>
+          <span class="text-gray-300">|</span>
+          <span id="paginationInfo" class="font-medium">عرض 0 - 0 من إجمالي 0</span>
+        </div>
+
+        <div class="flex items-center gap-1 text-xs" id="paginationControls">
+        </div>
+      </div>
+
+    </div>
+    </div><!-- /standardCRMSection -->
+
+    <!-- ================= قسم VIP ================= -->
+    <div id="vipCRMSection" class="space-y-5" style="display: none;">
+      <input type="file" id="vipFileInput" accept=".xlsx, .xls, .csv" style="display: none;">
+
+      <div class="bg-gradient-to-l from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">⭐</span>
+              <h2 class="text-xl font-extrabold text-amber-900">قسم VIP</h2>
+              <span id="vipSyncStatus" class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">خاص بالإدارة والمستخدم المصرح</span>
+            </div>
+            <p class="text-xs text-amber-800/80 mt-2 font-semibold">قاعدة بيانات منفصلة لعملاء VIP مع متابعة واتساب وحالة الدعم.</p>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
+              <div id="vipTotalClients" class="text-2xl font-extrabold text-amber-900">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">إجمالي VIP</div>
+            </div>
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px]">
+              <div id="vipWhatsAppDone" class="text-2xl font-extrabold text-emerald-600">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">تم واتساب</div>
+            </div>
+            <div class="bg-white/90 border border-amber-100 rounded-xl px-5 py-3 text-center min-w-[130px] col-span-2 sm:col-span-1">
+              <div id="vipTotalRevenue" class="text-2xl font-extrabold text-blue-700">0</div>
+              <div class="text-[11px] text-gray-500 font-bold">إجمالي المبالغ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vipSetupNotice" class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-xs font-bold" style="display:none;"></div>
+
+      <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_200px_150px] gap-2">
+          <div class="relative">
+            <input type="text" id="vipSearchInput" placeholder="بحث في VIP بالاسم أو الرقم..." class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <span class="absolute right-3 top-3 text-gray-400">🔍</span>
+          </div>
+          <select id="vipWhatsAppFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+            <option value="">كل حالات واتساب</option>
+          </select>
+          <select id="vipSupportFilter" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
+            <option value="">كل حالات الدعم</option>
+          </select>
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 flex items-center justify-center gap-2">
+            <span>🎯</span>
+            <span id="vipFilteredCount" class="text-xl font-extrabold text-amber-900">0</span>
+            <span class="text-xs font-bold text-amber-800">نتيجة</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="text-xs text-gray-500 font-semibold">
+            أعمدة الشيت المدعومة: <span class="font-bold text-gray-700">الاسم، الرقم، التواصل واتس اب، حالة الدعم، المبلغ</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع شيت VIP</button>
+            <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-sm">
+            <thead class="bg-amber-50 text-amber-950 text-xs font-bold">
+              <tr>
+                <th class="p-3.5">#</th>
+                <th class="p-3.5">الاسم</th>
+                <th class="p-3.5">الرقم</th>
+                <th class="p-3.5">التواصل واتس اب</th>
+                <th class="p-3.5">حالة الدعم</th>
+                <th class="p-3.5">المبلغ</th>
+                <th class="p-3.5">تاريخ الإضافة</th>
+                <th class="p-3.5 text-center">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="vipTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div id="vipEmptyState" class="text-center py-12 text-gray-400" style="display:none;">لا توجد بيانات VIP مطابقة.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: لوحة وسجل نشاطات الموظفين وإدارة كلمات السر لجميع الحسابات (الأدمن فقط) -->
+  <div id="adminHistoryModal" class="fixed inset-0 bg-black/70 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl p-6 relative max-h-[92vh] flex flex-col">
+      
+      <!-- Header -->
+      <div class="flex flex-wrap items-center justify-between pb-4 border-b gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-lg shadow-sm">
+            🛡️
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-900">لوحة الإدارة، كلمات السر وسجل الحركات</h3>
+            <p class="text-xs text-gray-500">إدارة ومزامنة كلمات سر الحسابات ومتابعة دقيقة لكافة التعديلات</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnExportLogs" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+            <span>📥</span>
+            <span>تصدير السجل</span>
+          </button>
+          <button type="button" id="closeAdminHistoryBtn" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1 cursor-pointer">✕</button>
+        </div>
+      </div>
+
+      <!-- بطاقات إدارة كلمات السر السحابية للحسابات -->
+      <div class="my-4 bg-slate-50 border border-slate-200 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span>🔐</span>
+            <span>كلمات السر الحالية للحسابات (تزامن سحابي فوري):</span>
+          </h4>
+          <span class="text-[11px] text-slate-500 font-medium">يمكنك نسخ أي باسورد وإرساله للموظف شخصياً</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          
+          <!-- بطاقة الأدمن -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-800">👑 حساب المدير (admin)</span>
+                <span class="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">المدير العام</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-slate-900" id="displayAdminPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeAdminPass" class="w-full bg-slate-800 hover:bg-black text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد الأدمن
+            </button>
+          </div>
+
+          <!-- بطاقة موظف الرجال -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-blue-800">👨 حساب الرجال (men)</span>
+                <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">عبدالرحمن أبو شامة</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-blue-700" id="displayMenPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeMenPass" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد الرجال
+            </button>
+          </div>
+
+          <!-- بطاقة مسؤولة السيدات -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-pink-800">🧕 حساب السيدات (women)</span>
+                <span class="text-[10px] bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded font-bold">قسم السيدات</span>
+              </div>
+              <div class="mt-2 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <span class="text-xs text-gray-500 font-semibold">الباسورد:</span>
+                <span class="font-mono text-xs font-extrabold text-pink-700" id="displayWomenPass">***</span>
+              </div>
+            </div>
+            <button type="button" id="btnChangeWomenPass" class="w-full bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold py-1.5 rounded-lg transition cursor-pointer">
+              ✏️ تعديل باسورد السيدات
+            </button>
+          </div>
+
+          <!-- بطاقة حساب VIP -->
+          <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900">⭐ حساب قسم VIP</span>
+              <label class="flex items-center gap-1 text-[10px] font-bold text-amber-800 cursor-pointer">
+                <input type="checkbox" id="vipEnabledInput" class="accent-amber-500">
+                مفعل
+              </label>
+            </div>
+            <input type="text" id="vipDisplayNameInput" placeholder="اسم الشخص الظاهر" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500">
+            <input type="text" id="vipUsernameInput" placeholder="اسم المستخدم للدخول" dir="ltr" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500 text-left">
+            <input type="text" id="vipPasswordInput" placeholder="كلمة المرور" dir="ltr" class="w-full border border-amber-200 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-amber-500 text-left font-mono">
+            <button type="button" id="btnSaveVipUser" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 rounded-lg transition cursor-pointer">
+              💾 حفظ / تعديل حساب VIP
+            </button>
+            <p class="text-[9px] text-amber-800/70 leading-relaxed">هذا الحساب يرى قسم VIP فقط. الأدمن يقدر يدخل القسم من زر VIP أعلى المنصة.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Filters for Logs -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+        <input type="text" id="logSearchInput" placeholder="بحث في السجل (اسم الموظف، العميل، التفاصيل)..." class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500">
+        
+        <select id="logActionFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
+          <option value="">كل أنواع الحركات</option>
+          <option value="تغيير حالة">تغيير حالة</option>
+          <option value="إضافة عميل">إضافة عميل</option>
+          <option value="تعديل بيانات">تعديل بيانات</option>
+          <option value="حذف عميل">حذف عميل</option>
+          <option value="حذف متعدد">حذف متعدد</option>
+          <option value="حذف مكررات">حذف مكررات</option>
+          <option value="استيراد شيت">استيراد شيت</option>
+          <option value="أمان وكلمات سر">أمان وكلمات سر</option>
+          <option value="تسجيل دخول">تسجيل دخول</option>
+        </select>
+
+        <select id="logEmployeeFilter" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none bg-white focus:border-blue-500 cursor-pointer">
+          <option value="">كل الموظفين</option>
+        </select>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="overflow-y-auto flex-1 border border-gray-100 rounded-xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-100 text-gray-700 font-bold sticky top-0">
+            <tr>
+              <th class="p-3">التوقيت والتاريخ</th>
+              <th class="p-3">المستخدم / الموظف</th>
+              <th class="p-3">نوع الحركة</th>
+              <th class="p-3">العميل المستهدف</th>
+              <th class="p-3.5">التفاصيل والتغيير</th>
+            </tr>
+          </thead>
+          <tbody id="adminLogsTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+        <div id="emptyLogsState" class="text-center py-10 text-gray-400" style="display: none;">
+          لا توجد حركات مسجلة حتى الآن.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal: تذكير المتابعات الشهرية -->
+  <div id="monthlyFollowUpModal" class="fixed inset-0 bg-black/65 backdrop-blur-sm items-center justify-center p-4 z-[60]" style="display: none;">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-gray-100">
+      <div class="bg-gradient-to-l from-blue-700 to-indigo-700 text-white p-5 flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-extrabold flex items-center gap-2">🔔 تذكير المتابعة الشهرية</h3>
+          <p id="monthlyFollowUpSubtitle" class="text-xs text-blue-100 mt-1">لديك عملاء حان موعد التواصل معهم من جديد.</p>
+        </div>
+        <button type="button" id="closeMonthlyFollowUpBtn" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-lg cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+            <span class="text-xs text-amber-700 font-bold">مطلوب متابعة اليوم / متأخر:</span>
+            <span id="monthlyFollowUpCount" class="text-xl font-extrabold text-amber-800 mr-1">0</span>
+          </div>
+          <p class="text-[11px] text-gray-500 font-medium">المتابعة تتجدد تلقائيًا بعد شهر من تاريخ آخر تواصل.</p>
+        </div>
+
+        <div id="monthlyFollowUpList" class="space-y-2 max-h-[55vh] overflow-y-auto pl-1"></div>
+
+        <div class="mt-4 pt-4 border-t flex justify-end">
+          <button type="button" id="dismissMonthlyFollowUpBtn" class="px-5 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold cursor-pointer">تمام، هتابعهم</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: إضافة / تعديل عميل -->
+  <div id="clientModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <h3 id="modalTitle" class="text-base font-bold text-gray-800">إضافة عميل جديد</h3>
+        <button type="button" id="closeClientModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <form id="clientForm" class="space-y-3.5">
+        <input type="hidden" id="editClientId" value="">
+        <input type="hidden" id="editContactedAt" value="">
+        <input type="hidden" id="editOriginalStatus" value="">
+        
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">اسم العميل</label>
+          <input type="text" id="clientName" required class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500" placeholder="مثال: أحمد محمد">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-gray-600">رقم الهاتف (11 رقم كامل)</label>
+            <span class="text-[10px] text-blue-600 font-semibold" id="phoneHint">مثال: 01099596677</span>
+          </div>
+          <input type="tel" id="clientPhone" required placeholder="010XXXXXXXX" dir="ltr" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 font-mono text-right">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">المبلغ المدفوع (ج.م)</label>
+          <input type="number" id="clientAmount" required min="0" step="any" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500" value="0">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">القسم المستهدف</label>
+          <select id="clientCategory" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
+            <option value="men">القسم الرجالي 👨</option>
+            <option value="women">قسم السيدات 🧕</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">الموظف المسؤول</label>
+          <select id="clientEmployeeSelect" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white font-semibold">
+            <option value="عبدالرحمن أبو شامة" selected>عبدالرحمن أبو شامة</option>
+            <option value="مسؤولة قسم السيدات">مسؤولة قسم السيدات</option>
+            <option value="إبراهيم البغدادي">إبراهيم البغدادي</option>
+            <option value="محمد مدني">محمد مدني</option>
+            <option value="custom">+ اسم موظف آخر...</option>
+          </select>
+          <input type="text" id="clientEmployeeCustom" placeholder="اكتب اسم الموظف..." class="w-full border rounded-xl p-2 text-xs outline-none focus:border-blue-500 mt-1.5" style="display: none;">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">حالة التواصل</label>
+          <select id="clientStatus" class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 bg-white">
+            <option value="لم يتم">لم يتم</option>
+            <option value="تم">تم</option>
+            <option value="لم يرد">لم يرد</option>
+            <option value="تذكير">تذكير</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">ملاحظات العميل</label>
+          <textarea id="clientNotes" rows="2" placeholder="اكتب أي ملاحظات خاصة بالعميل..." class="w-full border rounded-xl p-2.5 text-sm outline-none focus:border-blue-500 resize-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" id="cancelClientModalBtn" class="px-4 py-2 border rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer">إلغاء</button>
+          <button type="submit" id="saveClientSubmitBtn" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow cursor-pointer">حفظ في السحابة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: إحصائيات الموظفين الإجمالية -->
+  <div id="employeeModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <h3 class="text-base font-bold text-gray-800" id="employeeModalTitle">👥 تقرير أداء وتوزيع الموظفين</h3>
+        <button type="button" id="closeEmployeeModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-50 text-gray-600 font-semibold">
+            <tr>
+              <th class="p-2.5">الموظف</th>
+              <th class="p-2.5">عملاء هذا القسم</th>
+              <th class="p-2.5">تم</th>
+              <th class="p-2.5">لم يرد</th>
+              <th class="p-2.5">في الانتظار</th>
+              <th class="p-2.5">تذكير</th>
+              <th class="p-2.5">المبالغ المحصلة</th>
+              <th class="p-2.5">نسبة الإنجاز</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: التقرير الشهري التفصيلي -->
+  <div id="monthlyModal" class="fixed inset-0 bg-black/60 items-center justify-center p-4 z-50" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 relative">
+      <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <div class="flex items-center gap-3">
+          <h3 class="text-base font-bold text-gray-800" id="monthlyModalTitle">📊 التقرير الشهري التفصيلي</h3>
+          <select id="monthlySelectPicker" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 bg-white font-semibold outline-none focus:border-blue-500 cursor-pointer">
+          </select>
+        </div>
+        <button type="button" id="closeMonthlyModalBtn" class="text-gray-400 hover:text-gray-600 text-lg font-bold cursor-pointer">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5" id="monthlySummaryCards">
+      </div>
+
+      <h4 class="text-xs font-bold text-gray-700 mb-2">أداء الموظفين في هذا القسم خلال الشهر:</h4>
+      <div class="overflow-x-auto border border-gray-100 rounded-xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-gray-50 text-gray-600 font-semibold">
+            <tr>
+              <th class="p-2.5">اسم الموظف</th>
+              <th class="p-2.5">عملاء الشهر</th>
+              <th class="p-2.5">تم التواصل</th>
+              <th class="p-2.5">لم يرد</th>
+              <th class="p-2.5">في الانتظار</th>
+              <th class="p-2.5">المبالغ المحصلة</th>
+              <th class="p-2.5">نسبة الإنجاز</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyEmployeeTableBody" class="divide-y divide-gray-100">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script>
+    (function() {
+      // ✅ بيانات الاتصال بـ Supabase
+      const SUPABASE_URL = 'https://hmukbdfzgrflvgultnkq.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtdWtiZGZ6Z3JmbHZndWx0bmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NjUyNDEsImV4cCI6MjEwMjM0MTI0MX0.uQk1UICaMxRZ0oTPTBAJXYuUaoFUuc5yL6rYVX1o_H4';
+
+      let supabase = null;
+      if (window.supabase) {
+        try {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {
+          console.error("Supabase init error:", e);
+        }
+      }
+
+      // قائمة الموظفين الافتراضية
+      const DEFAULT_EMPLOYEES = [
+        "عبدالرحمن أبو شامة"
+      ];
+
+      // حسابات النظام المتزامنة سحابياً
+      let cloudUsers = {
+        admin: { pass: '123', role: 'admin', name: 'المدير العام (Admin)' },
+        men: { pass: '111', role: 'men', name: 'عبدالرحمن أبو شامة' },
+        women: { pass: '222', role: 'women', name: 'مسؤولة قسم السيدات' },
+        vip: { username: '', pass: '', role: 'vip', name: 'مستخدم VIP', enabled: false }
+      };
+
+      let currentUser = null;
+      let clients = [];
+      let vipClients = [];
+      let activityLogs = [];
+      let selectedIds = new Set();
+      let currentTab = 'الكل';
+      let currentSection = 'men'; // 'men' | 'women' | 'vip'
+
+      // متغيرات إدارة الصفحات
+      let currentPage = 1;
+      let pageSize = 50;
+      let searchDebounceTimer = null;
+      let followUpPopupShownForSession = false;
+
+      // جلب كلمات السر المحدثة من السحابة لتعمل على كل الأجهزة
+      async function fetchSettingsFromCloud() {
+        if (!supabase) return;
+        try {
+          const { data, error } = await supabase.from('crm_settings').select('*');
+          if (!error && data && data.length > 0) {
+            data.forEach(item => {
+              if (item.key === 'pass_admin' && item.value) cloudUsers.admin.pass = String(item.value).trim();
+              if (item.key === 'pass_men' && item.value) cloudUsers.men.pass = String(item.value).trim();
+              if (item.key === 'pass_women' && item.value) cloudUsers.women.pass = String(item.value).trim();
+              if (item.key === 'vip_username') cloudUsers.vip.username = String(item.value || '').trim().toLowerCase();
+              if (item.key === 'vip_name') cloudUsers.vip.name = String(item.value || 'مستخدم VIP').trim() || 'مستخدم VIP';
+              if (item.key === 'pass_vip') cloudUsers.vip.pass = String(item.value || '').trim();
+              if (item.key === 'vip_enabled') cloudUsers.vip.enabled = String(item.value).toLowerCase() === 'true';
+            });
+            renderAdminPassCards();
+          }
+        } catch (e) {
+          console.warn("Settings cloud sync warning:", e);
+        }
+      }
+
+      // تحديث عرض كلمات المرور في لوحة الأدمن
+      function renderAdminPassCards() {
+        const displayAdmin = document.getElementById('displayAdminPass');
+        const displayMen = document.getElementById('displayMenPass');
+        const displayWomen = document.getElementById('displayWomenPass');
+        const vipUsernameInput = document.getElementById('vipUsernameInput');
+        const vipDisplayNameInput = document.getElementById('vipDisplayNameInput');
+        const vipPasswordInput = document.getElementById('vipPasswordInput');
+        const vipEnabledInput = document.getElementById('vipEnabledInput');
+
+        if (displayAdmin) displayAdmin.innerText = cloudUsers.admin.pass;
+        if (displayMen) displayMen.innerText = cloudUsers.men.pass;
+        if (displayWomen) displayWomen.innerText = cloudUsers.women.pass;
+        if (vipUsernameInput) vipUsernameInput.value = cloudUsers.vip.username || '';
+        if (vipDisplayNameInput) vipDisplayNameInput.value = cloudUsers.vip.name || '';
+        if (vipPasswordInput) vipPasswordInput.value = cloudUsers.vip.pass || '';
+        if (vipEnabledInput) vipEnabledInput.checked = !!cloudUsers.vip.enabled;
+      }
+
+      // تحديث كلمة سر مستخدم معين في السحابة مع معالجة الأخطاء
+      async function updateCloudPassword(key, newPass) {
+        const trimmedPass = String(newPass).trim();
+        if (key === 'pass_admin') cloudUsers.admin.pass = trimmedPass;
+        if (key === 'pass_men') cloudUsers.men.pass = trimmedPass;
+        if (key === 'pass_women') cloudUsers.women.pass = trimmedPass;
+
+        renderAdminPassCards();
+
+        if (supabase) {
+          try {
+            const { error } = await supabase
+              .from('crm_settings')
+              .upsert({ key: key, value: trimmedPass }, { onConflict: 'key' });
+
+            if (error) {
+              console.error("Error persisting password to cloud:", error);
+              alert('⚠️ تنبيه: لم يتم حفظ كلمة المرور في السحابة بسبب خطأ: ' + error.message + '\nتأكد من إنشاء جدول crm_settings في Supabase.');
+              return false;
+            }
+            return true;
+          } catch (e) {
+            console.warn("Error persisting password to cloud:", e);
+            alert('⚠️ تعذر الاتصال بالسحابة لحفظ كلمة المرور: ' + e.message);
+            return false;
+          }
+        }
+        return true;
+      }
+
+
+      // حفظ / تعديل حساب VIP من لوحة الأدمن
+      async function saveVipUserSettings() {
+        if (!supabase) {
+          alert('تعذر الاتصال بقاعدة البيانات.');
+          return false;
+        }
+
+        const usernameEl = document.getElementById('vipUsernameInput');
+        const nameEl = document.getElementById('vipDisplayNameInput');
+        const passEl = document.getElementById('vipPasswordInput');
+        const enabledEl = document.getElementById('vipEnabledInput');
+
+        const username = String(usernameEl ? usernameEl.value : '').trim().toLowerCase();
+        const displayName = String(nameEl ? nameEl.value : '').trim();
+        const password = String(passEl ? passEl.value : '').trim();
+        const enabled = !!(enabledEl && enabledEl.checked);
+
+        if (enabled && (!username || !displayName || password.length < 3)) {
+          alert('لتفعيل حساب VIP لازم تدخل الاسم الظاهر واسم المستخدم وكلمة مرور 3 خانات على الأقل.');
+          return false;
+        }
+
+        try {
+          const settingsRows = [
+            { key: 'vip_username', value: username },
+            { key: 'vip_name', value: displayName || 'مستخدم VIP' },
+            { key: 'pass_vip', value: password },
+            { key: 'vip_enabled', value: enabled ? 'true' : 'false' }
+          ];
+
+          const { error } = await supabase
+            .from('crm_settings')
+            .upsert(settingsRows, { onConflict: 'key' });
+
+          if (error) throw error;
+
+          cloudUsers.vip.username = username;
+          cloudUsers.vip.name = displayName || 'مستخدم VIP';
+          cloudUsers.vip.pass = password;
+          cloudUsers.vip.enabled = enabled;
+
+          renderAdminPassCards();
+          logActivity(
+            'أمان وكلمات سر',
+            currentUser ? currentUser.name : 'الأدمن',
+            'حساب VIP',
+            enabled ? `تم حفظ/تحديث حساب VIP باسم المستخدم ${username}` : 'تم تعطيل حساب VIP'
+          );
+
+          alert(enabled ? 'تم حفظ وتفعيل حساب VIP بنجاح ⭐' : 'تم حفظ البيانات وتعطيل حساب VIP.');
+          return true;
+        } catch (e) {
+          console.error('VIP user settings error:', e);
+          alert('تعذر حفظ حساب VIP: ' + (e.message || e));
+          return false;
+        }
+      }
+
+      function canAccessVip() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'vip'));
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+      function initDateHeader() {
+        const now = new Date();
+        const label = document.getElementById('currentDateLabel');
+        if (label) label.innerText = `${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
+      }
+
+      function getCurrentFormattedTimestamp() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+        return `${dateStr}، ${timeStr}`;
+      }
+
+      // دالة تصحيح وتهيئة أرقام الهواتف (11 رقم تبدأ بـ 01)
+      function normalizePhoneNumber(rawPhone) {
+        if (!rawPhone && rawPhone !== 0) return '';
+        let str = String(rawPhone).trim();
+
+        if (str.includes('.')) {
+          str = str.split('.')[0];
+        }
+
+        let digits = str.replace(/[^0-9]/g, '');
+
+        if (digits.startsWith('201') && digits.length === 12) {
+          digits = '0' + digits.substring(2);
+        } else if (digits.startsWith('00201') && digits.length === 14) {
+          digits = '0' + digits.substring(4);
+        } else if (digits.length === 10 && (digits.startsWith('10') || digits.startsWith('11') || digits.startsWith('12') || digits.startsWith('15') || digits.startsWith('1'))) {
+          digits = '0' + digits;
+        }
+
+        return digits || str;
+      }
+
+      // دالة الكشف التلقائي عن الأرقام المكررة وحذفها من السحابة
+      async function removeDuplicateClients(showAlert = true) {
+        if (!supabase || clients.length === 0) return;
+        
+        const seenPhones = new Map();
+        const duplicateIdsToDelete = [];
+
+        // ترتيب بحيث نفضل الاحتفاظ بالسجلات ذات الحالة المكتملة أو الأحدث
+        const sorted = [...clients].sort((a, b) => {
+          if (a.status === 'تم' && b.status !== 'تم') return -1;
+          if (b.status === 'تم' && a.status !== 'تم') return 1;
+          return (b.id || 0) - (a.id || 0);
+        });
+
+        sorted.forEach(c => {
+          const normPhone = normalizePhoneNumber(c.phone);
+          if (!normPhone) return;
+          const key = `${c.category || 'men'}_${normPhone}`;
+
+          if (seenPhones.has(key)) {
+            duplicateIdsToDelete.push(c.id);
+          } else {
+            seenPhones.set(key, c.id);
+          }
+        });
+
+        if (duplicateIdsToDelete.length === 0) {
+          if (showAlert) alert('✨ رائع! لا توجد أي أرقام مكررة في قاعدة البيانات حالياً.');
+          return;
+        }
+
+        if (showAlert && !confirm(`تم العثور على ${duplicateIdsToDelete.length} رقم مكرر. هل ترغب في حذفهم تلقائياً والإبقاء على النسخة الأحدث فقط؟`)) {
+          return;
+        }
+
+        try {
+          const chunkSize = 200;
+          for (let i = 0; i < duplicateIdsToDelete.length; i += chunkSize) {
+            const chunk = duplicateIdsToDelete.slice(i, i + chunkSize);
+            await supabase.from('clients').delete().in('id', chunk);
+          }
+
+          logActivity(
+            'حذف مكررات',
+            currentUser ? currentUser.name : 'النظام',
+            `${duplicateIdsToDelete.length} مكرر`,
+            `تم حذف ${duplicateIdsToDelete.length} سجل مكرر بناءً على رقم الهاتف`
+          );
+
+          if (showAlert) alert(`تم حذف ${duplicateIdsToDelete.length} رقم مكرر بنجاح! 🧹`);
+          fetchClientsFromCloud(true);
+        } catch (e) {
+          console.error("Deduplication error:", e);
+          if (showAlert) alert('حدث خطأ أثناء تنظيف المكررات: ' + e.message);
+        }
+      }
+
+      // المسؤول المباشر عن التواصل
+      function getAutoAssignedEmployee() {
+        return 'عبدالرحمن أبو شامة';
+      }
+
+      async function logActivity(actionType, employee, clientName, details) {
+        const logEntry = {
+          action_type: actionType,
+          employee: employee || (currentUser ? currentUser.name : 'غير محدد'),
+          client_name: clientName || '-',
+          details: details || '',
+          timestamp: getCurrentFormattedTimestamp()
+        };
+
+        if (supabase) {
+          try {
+            await supabase.from('activity_logs').insert([logEntry]);
+          } catch (e) {
+            console.error("Log error:", e);
+          }
+        }
+      }
+
+      async function fetchActivityLogs() {
+        if (!supabase) return;
+        try {
+          const { data, error } = await supabase
+            .from('activity_logs')
+            .select('*')
+            .order('id', { ascending: false })
+            .limit(500);
+
+          if (!error && data) {
+            activityLogs = data;
+            renderAdminLogsTable();
+          }
+        } catch (e) {
+          console.error("Fetch logs error:", e);
+        }
+      }
+
+      function calculateTier(amount) {
+        const val = parseFloat(amount) || 0;
+        if (val >= 5000) return 'VIP';
+        if (val >= 2500) return 'فئة ذهبية';
+        if (val >= 1000) return 'فئة فضية';
+        return 'فئة برونزية';
+      }
+
+      function getTierBadge(tier) {
+        switch(tier) {
+          case 'VIP': return '<span class="bg-purple-100 text-purple-700 text-[11px] px-2 py-0.5 rounded font-semibold">VIP</span>';
+          case 'فئة ذهبية': return '<span class="bg-amber-100 text-amber-700 text-[11px] px-2 py-0.5 rounded font-semibold">ذهبية</span>';
+          case 'فئة فضية': return '<span class="bg-slate-200 text-slate-700 text-[11px] px-2 py-0.5 rounded font-semibold">فضية</span>';
+          default: return '<span class="bg-orange-100 text-orange-700 text-[11px] px-2 py-0.5 rounded font-semibold">برونزية</span>';
+        }
+      }
+
+      function getSectionBadge(category) {
+        if (category === 'women') {
+          return '<span class="bg-pink-100 text-pink-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🧕 نسائي</span>';
+        }
+        return '<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">👨 رجالي</span>';
+      }
+
+      function getActionBadge(type) {
+        switch(type) {
+          case 'تغيير حالة': return '<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔄 تغيير حالة</span>';
+          case 'إضافة عميل': return '<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">➕ إضافة عميل</span>';
+          case 'تعديل بيانات': return '<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">✏️ تعديل بيانات</span>';
+          case 'حذف عميل': return '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🗑️ حذف عميل</span>';
+          case 'حذف متعدد': return '<span class="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded-full font-bold">❌ حذف متعدد</span>';
+          case 'حذف مكررات': return '<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🧹 حذف مكررات</span>';
+          case 'استيراد شيت': return '<span class="bg-indigo-100 text-indigo-800 text-[10px] px-2 py-0.5 rounded-full font-bold">📥 استيراد شيت</span>';
+          case 'أمان وكلمات سر': return '<span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔒 أمان وكلمات سر</span>';
+          case 'تسجيل دخول': return '<span class="bg-teal-100 text-teal-800 text-[10px] px-2 py-0.5 rounded-full font-bold">🔑 تسجيل دخول</span>';
+          default: return `<span class="bg-gray-100 text-gray-800 text-[10px] px-2 py-0.5 rounded-full font-bold">${type}</span>`;
+        }
+      }
+
+      function formatWhatsAppPhone(phone) {
+        let cleaned = normalizePhoneNumber(phone);
+        if (cleaned.startsWith('01') && cleaned.length === 11) {
+          return '2' + cleaned;
+        }
+        if (cleaned.length === 10 && cleaned.startsWith('1')) {
+          return '20' + cleaned;
+        }
+        return cleaned;
+      }
+
+      function buildVipStatusOptions(currentValue, commonValues) {
+        const current = String(currentValue || '').trim();
+        const values = [];
+        if (current) values.push(current);
+        commonValues.forEach(v => {
+          if (!values.includes(v)) values.push(v);
+        });
+        return values.map(v => `<option value="${escapeHtml(v)}" ${v === current ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+      }
+
+      function refreshVipFilterOptions() {
+        const whatsappFilter = document.getElementById('vipWhatsAppFilter');
+        const supportFilter = document.getElementById('vipSupportFilter');
+        if (!whatsappFilter || !supportFilter) return;
+
+        const currentWhats = whatsappFilter.value;
+        const currentSupport = supportFilter.value;
+
+        const whatsappValues = [...new Set(vipClients.map(c => String(c.whatsapp_status || '').trim()).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'ar'));
+        const supportValues = [...new Set(vipClients.map(c => String(c.support_status || '').trim()).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b, 'ar'));
+
+        whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
+          whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        supportFilter.innerHTML = '<option value="">كل حالات الدعم</option>' +
+          supportValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+        if (whatsappValues.includes(currentWhats)) whatsappFilter.value = currentWhats;
+        if (supportValues.includes(currentSupport)) supportFilter.value = currentSupport;
+      }
+
+      function updateVipDashboard() {
+        const totalEl = document.getElementById('vipTotalClients');
+        const doneEl = document.getElementById('vipWhatsAppDone');
+        const revenueEl = document.getElementById('vipTotalRevenue');
+
+        const doneCount = vipClients.filter(c => {
+          const s = String(c.whatsapp_status || '').trim();
+          return s.includes('تم') && !s.includes('لم');
+        }).length;
+        const revenue = vipClients.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+
+        if (totalEl) totalEl.innerText = vipClients.length.toLocaleString('ar-EG');
+        if (doneEl) doneEl.innerText = doneCount.toLocaleString('ar-EG');
+        if (revenueEl) revenueEl.innerText = `${revenue.toLocaleString('ar-EG')} ج.م`;
+      }
+
+      function getFilteredVipClients() {
+        const searchEl = document.getElementById('vipSearchInput');
+        const whatsappEl = document.getElementById('vipWhatsAppFilter');
+        const supportEl = document.getElementById('vipSupportFilter');
+
+        const search = String(searchEl ? searchEl.value : '').trim().toLowerCase();
+        const whatsapp = String(whatsappEl ? whatsappEl.value : '').trim();
+        const support = String(supportEl ? supportEl.value : '').trim();
+
+        return [...vipClients]
+          .filter(c => {
+            if (search) {
+              const haystack = `${c.name || ''} ${c.phone || ''} ${c.whatsapp_status || ''} ${c.support_status || ''}`.toLowerCase();
+              if (!haystack.includes(search)) return false;
+            }
+            if (whatsapp && String(c.whatsapp_status || '') !== whatsapp) return false;
+            if (support && String(c.support_status || '') !== support) return false;
+            return true;
+          })
+          .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+      }
+
+      function renderVipTable() {
+        const tbody = document.getElementById('vipTableBody');
+        const emptyState = document.getElementById('vipEmptyState');
+        const countEl = document.getElementById('vipFilteredCount');
+        if (!tbody) return;
+
+        const data = getFilteredVipClients();
+        tbody.innerHTML = '';
+        if (countEl) countEl.innerText = data.length.toLocaleString('ar-EG');
+
+        if (emptyState) emptyState.style.display = data.length === 0 ? 'block' : 'none';
+
+        data.forEach((c, index) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-amber-50/40 transition';
+          const phone = normalizePhoneNumber(c.phone || '');
+          const waPhone = formatWhatsAppPhone(phone);
+          const whatsOptions = buildVipStatusOptions(c.whatsapp_status || 'لم يتم', ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
+          const supportOptions = buildVipStatusOptions(c.support_status || 'جديد', ['جديد', 'قيد المتابعة', 'تم الدعم', 'مغلق']);
+
+          tr.innerHTML = `
+            <td class="p-3.5 text-gray-500 font-semibold">${index + 1}</td>
+            <td class="p-3.5 font-bold text-gray-900">${escapeHtml(c.name || 'عميل VIP')}</td>
+            <td class="p-3.5">
+              <div class="flex items-center gap-2">
+                <span dir="ltr" class="font-mono text-xs font-bold text-gray-700">${escapeHtml(phone)}</span>
+                ${waPhone ? `<a href="https://wa.me/${encodeURIComponent(waPhone)}" target="_blank" rel="noopener noreferrer" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-1 rounded-lg font-bold hover:bg-emerald-100">واتساب</a>` : ''}
+              </div>
+            </td>
+            <td class="p-3.5">
+              <select class="vip-whatsapp-status border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold bg-white outline-none focus:border-amber-500" data-id="${escapeHtml(c.id)}">
+                ${whatsOptions}
+              </select>
+            </td>
+            <td class="p-3.5">
+              <select class="vip-support-status border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold bg-white outline-none focus:border-amber-500" data-id="${escapeHtml(c.id)}">
+                ${supportOptions}
+              </select>
+            </td>
+            <td class="p-3.5 font-extrabold text-blue-700">${(parseFloat(c.amount) || 0).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5 text-xs text-gray-500 font-semibold">${escapeHtml(c.date || '-')}</td>
+            <td class="p-3.5 text-center">
+              ${currentUser && currentUser.role === 'admin'
+                ? `<button type="button" class="vip-delete-btn text-[11px] bg-red-50 text-red-700 border border-red-100 px-2.5 py-1.5 rounded-lg font-bold hover:bg-red-100" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name || 'عميل VIP')}">حذف</button>`
+                : '<span class="text-[10px] text-gray-400">إدارة الحالة متاحة</span>'}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('.vip-whatsapp-status').forEach(el => {
+          el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'whatsapp_status', el.value));
+        });
+        tbody.querySelectorAll('.vip-support-status').forEach(el => {
+          el.addEventListener('change', () => updateVipClientField(el.dataset.id, 'support_status', el.value));
+        });
+        tbody.querySelectorAll('.vip-delete-btn').forEach(el => {
+          el.addEventListener('click', () => deleteVipClient(el.dataset.id, el.dataset.name));
+        });
+      }
+
+      async function updateVipClientField(id, field, value) {
+        if (!supabase || !canAccessVip()) return;
+        if (!['whatsapp_status', 'support_status'].includes(field)) return;
+
+        const oldClient = vipClients.find(c => String(c.id) === String(id));
+        if (!oldClient) return;
+
+        const oldValue = oldClient[field] || '';
+        oldClient[field] = value;
+        renderVipTable();
+        updateVipDashboard();
+        refreshVipFilterOptions();
+
+        try {
+          const payload = { [field]: value, updated_at: new Date().toISOString() };
+          const { error } = await supabase.from('vip_clients').update(payload).eq('id', id);
+          if (error) throw error;
+
+          logActivity(
+            'VIP تعديل',
+            currentUser ? currentUser.name : 'مستخدم VIP',
+            oldClient.name || 'عميل VIP',
+            `${field === 'whatsapp_status' ? 'حالة واتساب' : 'حالة الدعم'}: ${oldValue || '-'} ← ${value}`
+          );
+        } catch (e) {
+          oldClient[field] = oldValue;
+          renderVipTable();
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          alert('تعذر تحديث بيانات VIP: ' + (e.message || e));
+        }
+      }
+
+      async function deleteVipClient(id, name) {
+        if (!supabase || !currentUser || currentUser.role !== 'admin') {
+          alert('الحذف متاح للإدارة فقط.');
+          return;
+        }
+        if (!confirm(`تأكيد حذف عميل VIP: ${name || ''}؟`)) return;
+
+        try {
+          const { error } = await supabase.from('vip_clients').delete().eq('id', id);
+          if (error) throw error;
+          vipClients = vipClients.filter(c => String(c.id) !== String(id));
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          logActivity('VIP حذف', currentUser.name, name || 'عميل VIP', 'تم حذف العميل من قسم VIP');
+        } catch (e) {
+          alert('تعذر حذف عميل VIP: ' + (e.message || e));
+        }
+      }
+
+      async function fetchVipClientsFromCloud() {
+        if (!supabase || !canAccessVip()) return;
+
+        const statusEl = document.getElementById('vipSyncStatus');
+        const notice = document.getElementById('vipSetupNotice');
+        if (statusEl) statusEl.innerText = '🔄 جاري مزامنة VIP...';
+
+        try {
+          let allData = [];
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from('vip_clients')
+              .select('*')
+              .order('id', { ascending: false })
+              .range(from, from + batchSize - 1);
+
+            if (error) throw error;
+            if (data && data.length) {
+              allData = allData.concat(data);
+              if (data.length < batchSize) hasMore = false;
+              else from += batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          vipClients = allData;
+          if (notice) notice.style.display = 'none';
+          if (statusEl) statusEl.innerText = `🟢 VIP متصل (${vipClients.length.toLocaleString('ar-EG')} عميل)`;
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+        } catch (e) {
+          console.error('VIP fetch error:', e);
+          vipClients = [];
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+          if (statusEl) statusEl.innerText = '🔴 VIP غير جاهز';
+          if (notice) {
+            notice.style.display = 'block';
+            notice.innerText = 'قسم VIP محتاج إنشاء جدول vip_clients في Supabase أولاً. شغّل ملف SQL المرفق مرة واحدة ثم حدّث الصفحة. تفاصيل الخطأ: ' + (e.message || e);
+          }
+        }
+      }
+
+      async function importVipFile(file) {
+        if (!file || !supabase || !canAccessVip()) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+          try {
+            const bytes = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const existingPhones = new Set(vipClients.map(c => normalizePhoneNumber(c.phone)).filter(Boolean));
+            const seen = new Set();
+            const rows = [];
+            let duplicateCount = 0;
+
+            jsonData.forEach(row => {
+              const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
+              const phone = normalizePhoneNumber(
+                row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || row['الموبايل'] || row['رقم الواتساب'] || ''
+              );
+              const whatsappStatus = String(
+                row['التواصل واتس اب'] || row['التواصل واتساب'] || row['حالة التواصل واتس اب'] || row['حالة الواتس'] || row['WhatsApp Status'] || row['Whatsapp Status'] || 'لم يتم'
+              ).trim() || 'لم يتم';
+              const supportStatus = String(
+                row['حالة الدعم'] || row['الدعم'] || row['Support Status'] || row['Support'] || 'جديد'
+              ).trim() || 'جديد';
+              const amountRaw = row['المبلغ'] || row['المبلغ المدفوع'] || row['Amount'] || 0;
+              const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
+
+              if (!name && !phone) return;
+              if (phone && (existingPhones.has(phone) || seen.has(phone))) {
+                duplicateCount++;
+                return;
+              }
+              if (phone) seen.add(phone);
+
+              rows.push({
+                name: String(name || 'عميل VIP').trim(),
+                phone,
+                whatsapp_status: whatsappStatus,
+                support_status: supportStatus,
+                amount,
+                date: todayStr
+              });
+            });
+
+            if (rows.length === 0) {
+              alert(`لم يتم العثور على بيانات VIP جديدة. المكرر: ${duplicateCount.toLocaleString('ar-EG')}`);
+              return;
+            }
+
+            const chunkSize = 500;
+            for (let i = 0; i < rows.length; i += chunkSize) {
+              const chunk = rows.slice(i, i + chunkSize);
+              const { error } = await supabase.from('vip_clients').insert(chunk);
+              if (error) throw error;
+            }
+
+            logActivity(
+              'VIP استيراد',
+              currentUser ? currentUser.name : 'النظام',
+              `${rows.length} عميل VIP`,
+              `تم رفع ${rows.length} عميل VIP وتخطي ${duplicateCount} مكرر`
+            );
+            alert(`✅ تم رفع ${rows.length.toLocaleString('ar-EG')} عميل VIP.\n🧹 تم تخطي ${duplicateCount.toLocaleString('ar-EG')} رقم مكرر.`);
+            await fetchVipClientsFromCloud();
+          } catch (e) {
+            console.error('VIP import error:', e);
+            alert('تعذر رفع شيت VIP: ' + (e.message || e));
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      function exportVipClients() {
+        if (!canAccessVip()) return;
+        const data = getFilteredVipClients();
+        if (data.length === 0) {
+          alert('لا توجد بيانات VIP لتصديرها.');
+          return;
+        }
+
+        const exportData = data.map(c => ({
+          'الاسم': c.name || '',
+          'الرقم': normalizePhoneNumber(c.phone || ''),
+          'التواصل واتس اب': c.whatsapp_status || '',
+          'حالة الدعم': c.support_status || '',
+          'المبلغ': c.amount || 0,
+          'تاريخ الإضافة': c.date || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'VIP');
+        XLSX.writeFile(wb, 'VIP_CRM.xlsx');
+      }
+
+      function showVipSection() {
+        if (!canAccessVip()) {
+          alert('هذا القسم مخصص للإدارة وحساب VIP المصرح فقط.');
+          return;
+        }
+
+        currentSection = 'vip';
+        selectedIds.clear();
+        currentPage = 1;
+
+        const standard = document.getElementById('standardCRMSection');
+        const vip = document.getElementById('vipCRMSection');
+        const menBtn = document.getElementById('sectionMenBtn');
+        const womBtn = document.getElementById('sectionWomenBtn');
+        const vipBtn = document.getElementById('sectionVipBtn');
+
+        if (standard) standard.style.display = 'none';
+        if (vip) vip.style.display = 'block';
+        if (menBtn) menBtn.classList.remove('section-active');
+        if (womBtn) womBtn.classList.remove('section-active');
+        if (vipBtn) vipBtn.classList.add('section-active');
+
+        updateBulkActionBar();
+        fetchVipClientsFromCloud();
+      }
+
+      // جلب البيانات من السحابة مع الحفاظ على مكان التمرير
+      async function fetchClientsFromCloud(preserveScroll = true) {
+        if (!supabase) return;
+        const currentScroll = preserveScroll ? window.scrollY : 0;
+        const statusEl = document.getElementById('syncStatus');
+        try {
+          if (statusEl) {
+            statusEl.innerText = '🔄 جاري المزامنة...';
+            statusEl.className = 'text-[11px] bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
+          }
+
+          let allData = [];
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from('clients')
+              .select('*')
+              .order('id', { ascending: false })
+              .range(from, from + batchSize - 1);
+
+            if (error) {
+              const fallbackRes = await supabase.from('clients').select('*');
+              if (fallbackRes.data) allData = fallbackRes.data;
+              break;
+            }
+
+            if (data && data.length > 0) {
+              allData = allData.concat(data);
+              if (data.length < batchSize) hasMore = false;
+              else from += batchSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          clients = allData;
+          if (statusEl) {
+            statusEl.innerText = `🟢 متصل سحابياً (${clients.length.toLocaleString('ar-EG')} عميل)`;
+            statusEl.className = 'text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
+          }
+
+          const currentIdStrings = new Set(clients.map(c => String(c.id)));
+          selectedIds.forEach(id => {
+            if (!currentIdStrings.has(id)) selectedIds.delete(id);
+          });
+
+          updateDashboardStats();
+          updateAmountFilterOptions();
+          renderTable(preserveScroll, currentScroll);
+          updateBulkActionBar();
+          maybeShowMonthlyFollowUpPopup();
+        } catch (err) {
+          console.error("Fetch error:", err);
+          if (statusEl) {
+            statusEl.innerText = '🔴 تعذر الاتصال بالسحابة: ' + err.message;
+            statusEl.className = 'text-[11px] bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-semibold mr-2';
+          }
+        }
+      }
+
+      function setupRealtimeListener() {
+        if (!supabase) return;
+        try {
+          supabase
+            .channel('clients_db_changes_timestamped')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
+              if (currentUser && currentUser.role !== 'vip' && currentSection !== 'vip') fetchClientsFromCloud(true);
+            })
+            .subscribe();
+
+          supabase
+            .channel('vip_clients_db_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'vip_clients' }, () => {
+              if (canAccessVip()) fetchVipClientsFromCloud();
+            })
+            .subscribe();
+
+          supabase
+            .channel('crm_settings_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_settings' }, () => {
+              fetchSettingsFromCloud();
+            })
+            .subscribe();
+        } catch (e) {
+          console.warn("Realtime error:", e);
+        }
+      }
+
+      // تحويل الأرقام العربية/الفارسية لأرقام إنجليزية لتسهيل قراءة تواريخ آخر تواصل
+      function normalizeDateDigits(value) {
+        return String(value ?? '')
+          .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+          .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+          .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+          .trim();
+      }
+
+      // قراءة تاريخ "آخر تواصل" سواء كان بالتنسيق العربي الحالي أو ISO أو تاريخ رقمي/Excel
+      function parseContactedAt(value) {
+        if (value === null || value === undefined || value === '') return null;
+
+        if (value instanceof Date && !isNaN(value.getTime())) return new Date(value.getTime());
+
+        if (typeof value === 'number' && isFinite(value)) {
+          if (value > 20000 && value < 100000) {
+            const excelDate = new Date(Math.round((value - 25569) * 86400 * 1000));
+            if (!isNaN(excelDate.getTime())) return excelDate;
+          }
+          const numericDate = new Date(value);
+          if (!isNaN(numericDate.getTime())) return numericDate;
+        }
+
+        const raw = normalizeDateDigits(value).replace(/،/g, ',');
+        if (!raw) return null;
+
+        const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+        if (isoMatch) {
+          return new Date(
+            Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]),
+            Number(isoMatch[4] || 0), Number(isoMatch[5] || 0), Number(isoMatch[6] || 0)
+          );
+        }
+
+        const numericMatch = raw.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/);
+        if (numericMatch) {
+          return new Date(Number(numericMatch[3]), Number(numericMatch[2]) - 1, Number(numericMatch[1]));
+        }
+
+        const months = {
+          'يناير': 0, 'فبراير': 1, 'مارس': 2, 'أبريل': 3, 'ابريل': 3,
+          'مايو': 4, 'يونيو': 5, 'يوليو': 6, 'أغسطس': 7, 'اغسطس': 7,
+          'سبتمبر': 8, 'أكتوبر': 9, 'اكتوبر': 9, 'نوفمبر': 10, 'ديسمبر': 11
+        };
+
+        const monthNames = Object.keys(months).join('|');
+        const arabicDateMatch = raw.match(new RegExp('(\\d{1,2})\\s+(' + monthNames + ')\\s+(\\d{4})'));
+        if (arabicDateMatch) {
+          let hours = 0, minutes = 0, seconds = 0;
+          const timeMatch = raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(ص|م|AM|PM|am|pm)?/);
+          if (timeMatch) {
+            hours = Number(timeMatch[1] || 0);
+            minutes = Number(timeMatch[2] || 0);
+            seconds = Number(timeMatch[3] || 0);
+            const meridiem = timeMatch[4] || '';
+            if ((meridiem === 'م' || /^pm$/i.test(meridiem)) && hours < 12) hours += 12;
+            if ((meridiem === 'ص' || /^am$/i.test(meridiem)) && hours === 12) hours = 0;
+          }
+          return new Date(
+            Number(arabicDateMatch[3]), months[arabicDateMatch[2]], Number(arabicDateMatch[1]),
+            hours, minutes, seconds
+          );
+        }
+
+        const fallback = new Date(raw);
+        return isNaN(fallback.getTime()) ? null : fallback;
+      }
+
+      function addOneMonthClamped(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const day = date.getDate();
+        const lastDayOfTargetMonth = new Date(year, month + 2, 0).getDate();
+        const result = new Date(year, month + 1, Math.min(day, lastDayOfTargetMonth));
+        result.setHours(0, 0, 0, 0);
+        return result;
+      }
+
+      function formatShortArabicDate(date) {
+        if (!date || isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      function getMonthlyFollowUpsDue() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return getActiveSectionClients()
+          .filter(c => c && c.status === 'تم' && c.contacted_at)
+          .map(c => {
+            const lastContact = parseContactedAt(c.contacted_at);
+            if (!lastContact) return null;
+            const dueDate = addOneMonthClamped(lastContact);
+            const overdueDays = Math.max(0, Math.floor((today - dueDate) / 86400000));
+            return { client: c, lastContact, dueDate, overdueDays };
+          })
+          .filter(item => item && item.dueDate <= today)
+          .sort((a, b) => a.dueDate - b.dueDate);
+      }
+
+      function closeMonthlyFollowUpPopup() {
+        const modal = document.getElementById('monthlyFollowUpModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      function renderMonthlyFollowUpPopup() {
+        const modal = document.getElementById('monthlyFollowUpModal');
+        const list = document.getElementById('monthlyFollowUpList');
+        const countEl = document.getElementById('monthlyFollowUpCount');
+        const subtitle = document.getElementById('monthlyFollowUpSubtitle');
+        if (!modal || !list || !countEl) return;
+
+        const dueItems = getMonthlyFollowUpsDue();
+        if (dueItems.length === 0) {
+          closeMonthlyFollowUpPopup();
+          return;
+        }
+
+        countEl.innerText = dueItems.length.toLocaleString('ar-EG');
+        if (subtitle) subtitle.innerText = `عندك ${dueItems.length.toLocaleString('ar-EG')} عميل حان موعد المتابعة الشهرية معاهم.`;
+        list.innerHTML = '';
+
+        dueItems.forEach(item => {
+          const c = item.client;
+          const normalizedPhone = normalizePhoneNumber(c.phone);
+          const waPhone = formatWhatsAppPhone(normalizedPhone);
+          const waMessage = `السلام عليكم و رحمة الله و بركاته\nمتابعة شهرية من قسم العلاقات العامة بالمحطات السبع`;
+          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
+          const dueText = item.overdueDays > 0
+            ? `متأخر ${item.overdueDays.toLocaleString('ar-EG')} يوم`
+            : 'موعد المتابعة اليوم';
+
+          const card = document.createElement('div');
+          card.className = 'border border-gray-200 rounded-2xl p-3.5 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-3';
+          card.innerHTML = `
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-extrabold text-gray-900">${c.name || 'عميل'}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${item.overdueDays > 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${dueText}</span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <span>📞 ${normalizedPhone || '-'}</span>
+                <span>آخر تواصل: ${formatShortArabicDate(item.lastContact)}</span>
+                <span>موعد المتابعة: ${formatShortArabicDate(item.dueDate)}</span>
+                <span>الموظف: ${c.employee || '-'}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <a href="${waLink}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-bold">💬 واتساب</a>
+              <button type="button" data-followup-done="${c.id}" class="followup-done-btn bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer">✓ تم التواصل الآن</button>
+            </div>`;
+          list.appendChild(card);
+        });
+
+        list.querySelectorAll('.followup-done-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-followup-done');
+            const targetClient = clients.find(c => String(c.id) === String(id));
+            if (!targetClient) return;
+
+            const newContactedAt = getCurrentFormattedTimestamp();
+            this.disabled = true;
+            this.innerText = 'جاري الحفظ...';
+
+            targetClient.status = 'تم';
+            targetClient.contacted_at = newContactedAt;
+            updateDashboardStats();
+            renderTable(false);
+
+            if (supabase) {
+              const { error } = await supabase
+                .from('clients')
+                .update({ status: 'تم', contacted_at: newContactedAt })
+                .eq('id', id);
+
+              if (error) {
+                alert('تعذر تحديث آخر تواصل: ' + error.message);
+                await fetchClientsFromCloud(true);
+                return;
+              }
+
+              logActivity(
+                'تغيير حالة',
+                currentUser ? currentUser.name : (targetClient.employee || 'موظف'),
+                targetClient.name || '-',
+                'تم تسجيل متابعة شهرية جديدة وتحديث تاريخ آخر تواصل'
+              );
+            }
+
+            renderMonthlyFollowUpPopup();
+          });
+        });
+
+        modal.style.display = 'flex';
+      }
+
+      function maybeShowMonthlyFollowUpPopup() {
+        if (followUpPopupShownForSession || !currentUser) return;
+        if (currentUser.role === 'admin' || currentUser.role === 'vip') return;
+        followUpPopupShownForSession = true;
+        renderMonthlyFollowUpPopup();
+      }
+
+      // فلترة صارمة حسب القسم المفتوح
+      function getActiveSectionClients() {
+        if (currentSection === 'vip') return [];
+        if (currentSection === 'women') {
+          return clients.filter(c => c.category === 'women');
+        }
+        return clients.filter(c => c.category === 'men' || (!c.category && c.category !== 'women') || c.category === 'general');
+      }
+
+      function updateDashboardStats() {
+        const activeClients = getActiveSectionClients();
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        // ================= إحصائيات الشهر الحالي فقط =================
+        // إجمالي الشهر = عدد الأرقام/العملاء المرفوعين خلال الشهر الحالي.
+        // نسبة التواصل = عدد العملاء الذين حالتهم "تم" من عملاء الشهر ÷ إجمالي عملاء الشهر.
+        const currentMonthClients = activeClients.filter(c => (c.date || '').startsWith(currentYearMonth));
+        const currentMonthTotal = currentMonthClients.length;
+
+        let monthDoneCount = 0;
+        let monthNoAnswerCount = 0;
+        let monthPendingCount = 0;
+        let monthReminderCount = 0;
+
+        for (let i = 0; i < currentMonthClients.length; i++) {
+          const c = currentMonthClients[i];
+          if (c.status === 'تم') monthDoneCount++;
+          else if (c.status === 'لم يرد') monthNoAnswerCount++;
+          else if (c.status === 'تذكير') monthReminderCount++;
+          else monthPendingCount++; // يشمل "لم يتم" وأي حالة فارغة/قديمة
+        }
+
+        const heroEl = document.getElementById('heroMonthTotal');
+        if (heroEl) heroEl.innerText = currentMonthTotal.toLocaleString('ar-EG');
+
+        const pDone = document.getElementById('pillDone');
+        const pNo = document.getElementById('pillNoAnswer');
+        const pPend = document.getElementById('pillPending');
+        const pRem = document.getElementById('pillReminder');
+
+        if (pDone) pDone.innerText = monthDoneCount.toLocaleString('ar-EG');
+        if (pNo) pNo.innerText = monthNoAnswerCount.toLocaleString('ar-EG');
+        if (pPend) pPend.innerText = monthPendingCount.toLocaleString('ar-EG');
+        if (pRem) pRem.innerText = monthReminderCount.toLocaleString('ar-EG');
+
+        const successRate = currentMonthTotal > 0
+          ? Math.round((monthDoneCount / currentMonthTotal) * 100)
+          : 0;
+
+        const heroSucc = document.getElementById('heroSuccessRate');
+        if (heroSucc) heroSucc.innerText = `${successRate}%`;
+
+        const heroSuccessDetails = document.getElementById('heroSuccessDetails');
+        if (heroSuccessDetails) {
+          heroSuccessDetails.innerText = `تم التواصل مع ${monthDoneCount.toLocaleString('ar-EG')} من ${currentMonthTotal.toLocaleString('ar-EG')} عميل هذا الشهر`;
+        }
+
+        const deg = (successRate / 100) * 360;
+        const ring = document.getElementById('progressRing');
+        if (ring) ring.style.background = `conic-gradient(#10b981 ${deg}deg, #e2e8f0 0deg)`;
+
+        // ================= بطاقات إجمالي القسم (كل الفترات) =================
+        // تظل البطاقات السفلية إجمالية كما كانت حتى لا نغير وظيفة النظام الأساسية.
+        let doneCount = 0, pendingCount = 0, totalRevenue = 0;
+
+        for (let i = 0; i < activeClients.length; i++) {
+          const c = activeClients[i];
+          if (c.status === 'تم') doneCount++;
+          else if (c.status === 'لم يتم' || !c.status) pendingCount++;
+          totalRevenue += (parseFloat(c.amount) || 0);
+        }
+
+        const cardT = document.getElementById('cardTotal');
+        const cardD = document.getElementById('cardDone');
+        const cardP = document.getElementById('cardPending');
+        const cardR = document.getElementById('cardRevenue');
+
+        if (cardT) cardT.innerText = activeClients.length.toLocaleString('ar-EG');
+        if (cardD) cardD.innerText = doneCount.toLocaleString('ar-EG');
+        if (cardP) cardP.innerText = pendingCount.toLocaleString('ar-EG');
+        if (cardR) cardR.innerText = totalRevenue.toLocaleString('ar-EG');
+      }
+
+      function setTab(tab, elementId) {
+        currentTab = tab;
+        currentPage = 1;
+
+        // مزامنة التبويبات مع فلتر حالة التواصل حتى لا تتعارض الفلاتر مع بعضها
+        const statusFilter = document.getElementById('statusFilter');
+        if (statusFilter) statusFilter.value = tab === 'الكل' ? '' : tab;
+
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+        const activeBtn = document.getElementById(elementId);
+        if (activeBtn) activeBtn.classList.add('active-tab');
+        renderTable(false);
+      }
+
+      function updateBulkActionBar() {
+        const bar = document.getElementById('bulkActionsBar');
+        const badge = document.getElementById('selectedCountBadge');
+        if (!bar || !badge) return;
+
+        if (selectedIds.size > 0) {
+          badge.innerText = selectedIds.size.toLocaleString('ar-EG');
+          bar.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+          bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        } else {
+          bar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+          bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        }
+      }
+
+      // فلتر المبالغ ثابت بالقيم المطلوبة، ويعرض العملاء الذين دفعوا المبلغ المختار بالضبط
+      function updateAmountFilterOptions() {
+        const amountFilter = document.getElementById('amountFilter');
+        if (!amountFilter) return;
+
+        const fixedAmounts = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000];
+        const previousValue = amountFilter.value;
+
+        amountFilter.innerHTML = '<option value="">كل المبالغ</option>';
+
+        fixedAmounts.forEach(amount => {
+          const option = document.createElement('option');
+          option.value = String(amount);
+          option.textContent = `${amount.toLocaleString('en-US')} ج.م`;
+          amountFilter.appendChild(option);
+        });
+
+        const stillExists = [...amountFilter.options].some(option => option.value === previousValue);
+        amountFilter.value = stillExists ? previousValue : '';
+      }
+
+      // تطبيق كل فلاتر الجدول في مكان واحد لضمان توافق البحث والمبلغ وحالة التواصل مع الـ Pagination
+      function getFilteredClientsForTable() {
+        const searchInput = document.getElementById('searchInput');
+        const amountFilter = document.getElementById('amountFilter');
+        const statusFilter = document.getElementById('statusFilter');
+
+        const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const selectedAmount = amountFilter ? amountFilter.value : '';
+        const selectedStatus = statusFilter ? statusFilter.value : '';
+
+        let filtered = getActiveSectionClients();
+
+        // لو المستخدم اختار حالة من الفلتر نستخدمها مباشرة، وإلا نستعمل التبويب الحالي
+        const effectiveStatus = selectedStatus || (currentTab !== 'الكل' ? currentTab : '');
+        if (effectiveStatus) {
+          filtered = filtered.filter(c => c.status === effectiveStatus);
+        }
+
+        if (selectedAmount !== '') {
+          const amountValue = parseFloat(selectedAmount);
+          filtered = filtered.filter(c => (parseFloat(c.amount) || 0) === amountValue);
+        }
+
+        if (search) {
+          filtered = filtered.filter(c => 
+            (c.name && c.name.toLowerCase().includes(search)) || 
+            (c.phone && String(c.phone).includes(search)) ||
+            (c.employee && c.employee.toLowerCase().includes(search)) ||
+            (c.notes && c.notes.toLowerCase().includes(search))
+          );
+        }
+
+        // ترتيب الجدول تلقائيًا حسب آخر تواصل: الأحدث أولًا، ومن لم يتم التواصل معه يظهر في النهاية.
+        filtered.sort((a, b) => {
+          const dateA = parseContactedAt(a.contacted_at);
+          const dateB = parseContactedAt(b.contacted_at);
+          const timeA = dateA ? dateA.getTime() : 0;
+          const timeB = dateB ? dateB.getTime() : 0;
+          if (timeA !== timeB) return timeB - timeA;
+          return (Number(b.id) || 0) - (Number(a.id) || 0);
+        });
+
+        return filtered;
+      }
+
+      // دالة بناء الجدول مع تثبيت مكان التمرير الدقيق
+      function renderTable(preserveScroll = false, targetScroll = 0) {
+        const scrollPosition = preserveScroll ? (targetScroll || window.scrollY) : 0;
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        let filtered = getFilteredClientsForTable();
+
+        const totalItems = filtered.length;
+
+        // عداد النتائج يتغير فورًا مع أي فلتر أو بحث
+        const filteredResultsCount = document.getElementById('filteredResultsCount');
+        const filteredResultsMeta = document.getElementById('filteredResultsMeta');
+        if (filteredResultsCount) filteredResultsCount.innerText = totalItems.toLocaleString('ar-EG');
+        if (filteredResultsMeta) {
+          const sectionTotal = getActiveSectionClients().length;
+          filteredResultsMeta.innerText = `مطابق من أصل ${sectionTotal.toLocaleString('ar-EG')}`;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalItems);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        const emptyEl = document.getElementById('emptyState');
+        if (emptyEl) {
+          emptyEl.style.display = (totalItems === 0) ? 'block' : 'none';
+        }
+
+        const infoEl = document.getElementById('paginationInfo');
+        if (infoEl) {
+          if (totalItems === 0) {
+            infoEl.innerText = 'لا توجد نتائج في هذا القسم';
+          } else {
+            infoEl.innerText = `عرض ${(startIndex + 1).toLocaleString('ar-EG')} - ${endIndex.toLocaleString('ar-EG')} من إجمالي ${totalItems.toLocaleString('ar-EG')}`;
+          }
+        }
+
+        renderPaginationControls(totalPages);
+
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) {
+          selectAll.checked = pageItems.length > 0 && pageItems.every(c => selectedIds.has(String(c.id)));
+        }
+
+        pageItems.forEach((c, idx) => {
+          const globalIdx = startIndex + idx + 1;
+          const tier = calculateTier(c.amount);
+          const normalizedPhone = normalizePhoneNumber(c.phone);
+          const waPhone = formatWhatsAppPhone(normalizedPhone);
+          
+          // نص رسالة الواتساب الموحدة
+          let waMessage = `السلام عليكم و رحمة الله و بركاته\nمع حضرتك عبدالرحمن أبو شامة من قسم العلاقات العامة بالمحطات السبع`;
+          if (c.category === 'women') {
+            waMessage = `السلام عليكم و رحمة الله و بركاته\nمع حضرتك مسؤولة التواصل من قسم العلاقات العامة بالمحطات السبع`;
+          }
+          
+          const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
+          const isSelected = selectedIds.has(String(c.id));
+
+          const tr = document.createElement('tr');
+          tr.id = `row-client-${c.id}`;
+          tr.className = `hover:bg-gray-50 border-b border-gray-100 transition text-gray-700 cursor-pointer ${isSelected ? 'row-selected' : ''}`;
+          tr.setAttribute('data-id', c.id);
+          
+          tr.innerHTML = `
+            <td class="p-3.5 text-center" onclick="event.stopPropagation()">
+              <input type="checkbox" data-id="${c.id}" class="row-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer" ${isSelected ? 'checked' : ''}>
+            </td>
+            <td class="p-3.5 text-gray-400 text-xs">${globalIdx}</td>
+            <td class="p-3.5 font-bold text-gray-900">${c.name || '-'}</td>
+            <td class="p-3.5 font-mono text-gray-800 text-xs font-bold" dir="ltr">${normalizedPhone || '-'}</td>
+            <td class="p-3.5 font-bold text-blue-700">${Number(c.amount || 0).toLocaleString('ar-EG')} ج.م</td>
+            <td class="p-3.5">${getTierBadge(tier)}</td>
+            <td class="p-3.5">${getSectionBadge(c.category)}</td>
+            <td class="p-3.5" onclick="event.stopPropagation()">
+              <select data-id="${c.id}" class="status-select text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium outline-none focus:border-blue-500 cursor-pointer">
+                <option value="لم يتم" ${c.status === 'لم يتم' ? 'selected' : ''}>لم يتم</option>
+                <option value="تم" ${c.status === 'تم' ? 'selected' : ''}>تم</option>
+                <option value="لم يرد" ${c.status === 'لم يرد' ? 'selected' : ''}>لم يرد</option>
+                <option value="تذكير" ${c.status === 'تذكير' ? 'selected' : ''}>تذكير</option>
+              </select>
+            </td>
+            <td class="p-3.5 text-xs">
+              ${c.contacted_at ? `
+                <div class="text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit whitespace-nowrap">
+                  <span>🕒</span>
+                  <span>${c.contacted_at}</span>
+                </div>
+              ` : '<span class="text-gray-300">لم يتم تواصل بعد</span>'}
+            </td>
+            <td class="p-3.5 text-xs text-gray-800 font-semibold">${c.employee || 'عبدالرحمن أبو شامة'}</td>
+            <td class="p-3.5 text-xs text-gray-400">${c.date || '-'}</td>
+            <td class="p-3.5 text-xs text-gray-500 max-w-[180px] truncate" title="${c.notes || ''}">
+              ${c.notes ? `<span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${c.notes}</span>` : '<span class="text-gray-300">-</span>'}
+            </td>
+            <td class="p-3.5 text-center" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-center gap-1.5">
+                <a href="${waLink}" target="_blank" class="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+                  💬 واتساب
+                </a>
+                <button type="button" data-id="${c.id}" class="edit-btn text-blue-600 hover:text-blue-800 text-xs font-semibold px-1 cursor-pointer">تعديل</button>
+                <button type="button" data-id="${c.id}" class="del-btn text-red-500 hover:text-red-700 text-xs font-semibold px-1 cursor-pointer">حذف</button>
+              </div>
+            </td>
+          `;
+
+          tr.addEventListener('click', function() {
+            toggleRowSelection(String(c.id));
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        // استعادة مكان التمرير بدقة لمنع العودة لأعلى الصفحة
+        if (preserveScroll && scrollPosition > 0) {
+          requestAnimationFrame(() => {
+            window.scrollTo(0, scrollPosition);
+          });
+        }
+
+        tbody.querySelectorAll('.row-checkbox').forEach(cb => {
+          cb.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const id = this.getAttribute('data-id');
+            if (this.checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+            renderTable(true);
+            updateBulkActionBar();
+          });
+        });
+
+        // معالجة تغيير الحالة مع تحديث فوري والحفاظ على مكان الموظف في الجدول
+        tbody.querySelectorAll('.status-select').forEach(sel => {
+          sel.addEventListener('change', async function() {
+            const id = this.getAttribute('data-id');
+            const savedScroll = window.scrollY;
+            const targetClient = clients.find(c => String(c.id) === String(id));
+            const oldStatus = targetClient ? targetClient.status : 'غير معروف';
+            const newStatus = this.value;
+            let updateData = { status: newStatus };
+
+            // أي محاولة تواصل فعلية تُسجل كآخر تواصل، مع الحفاظ على التاريخ السابق لو رجعت الحالة "لم يتم"
+            if (newStatus !== 'لم يتم') {
+              updateData.contacted_at = getCurrentFormattedTimestamp();
+            }
+
+            // تحديث فوري محلياً (Optimistic UI Update)
+            if (targetClient) {
+              targetClient.status = newStatus;
+              if (Object.prototype.hasOwnProperty.call(updateData, 'contacted_at')) {
+                targetClient.contacted_at = updateData.contacted_at;
+              }
+              updateDashboardStats();
+              
+              // إعادة رسم الجدول مع تثبيت مكان التمرير في مكانه بالضبط
+              renderTable(true, savedScroll);
+            }
+
+            // الحفظ في السحابة في الخلفية
+            if (supabase) {
+              const { error } = await supabase.from('clients').update(updateData).eq('id', id);
+              if (error) {
+                alert('خطأ في تحديث الحالة: ' + error.message);
+                fetchClientsFromCloud(true);
+              } else {
+                logActivity(
+                  'تغيير حالة',
+                  currentUser ? currentUser.name : (targetClient ? targetClient.employee : 'عبدالرحمن أبو شامة'),
+                  targetClient ? targetClient.name : '-',
+                  `تم تغيير الحالة من [${oldStatus}] إلى [${newStatus}]`
+                );
+              }
+            }
+          });
+        });
+
+        tbody.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const client = clients.find(c => String(c.id) === String(id));
+            if (client) openEditModal(client);
+          });
+        });
+
+        tbody.querySelectorAll('.del-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-id');
+            const targetClient = clients.find(c => String(c.id) === String(id));
+            if (confirm('هل ترغب بالتأكيد في حذف هذا العميل من السحابة؟')) {
+              if (supabase) {
+                const { error } = await supabase.from('clients').delete().eq('id', id);
+                if (error) {
+                  alert('خطأ في الحذف: ' + error.message);
+                } else {
+                  logActivity(
+                    'حذف عميل',
+                    currentUser ? currentUser.name : 'غير محدد',
+                    targetClient ? targetClient.name : '-',
+                    `تم حذف العميل برقم هاتف [${targetClient ? targetClient.phone : '-'}] ومبلغ [${targetClient ? targetClient.amount : 0} ج.م]`
+                  );
+                  fetchClientsFromCloud(true);
+                }
+              }
+            }
+          });
+        });
+      }
+
+      function renderPaginationControls(totalPages) {
+        const container = document.getElementById('paginationControls');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.innerText = 'السابق';
+        prevBtn.disabled = (currentPage === 1);
+        prevBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
+        prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(false); } };
+        container.appendChild(prevBtn);
+
+        const pages = [];
+        if (totalPages <= 7) {
+          for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          if (currentPage > 3) pages.push('...');
+          const start = Math.max(2, currentPage - 1);
+          const end = Math.min(totalPages - 1, currentPage + 1);
+          for (let i = start; i <= end; i++) {
+            if (!pages.includes(i)) pages.push(i);
+          }
+          if (currentPage < totalPages - 2) pages.push('...');
+          pages.push(totalPages);
+        }
+
+        pages.forEach(p => {
+          if (p === '...') {
+            const dots = document.createElement('span');
+            dots.innerText = '...';
+            dots.className = 'px-2 py-1 text-gray-400 font-bold';
+            container.appendChild(dots);
+          } else {
+            const pageBtn = document.createElement('button');
+            pageBtn.type = 'button';
+            pageBtn.innerText = p;
+            pageBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-bold transition cursor-pointer ${p === currentPage ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`;
+            pageBtn.onclick = () => { currentPage = p; renderTable(false); };
+            container.appendChild(pageBtn);
+          }
+        });
+
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.innerText = 'التالي';
+        nextBtn.disabled = (currentPage === totalPages);
+        nextBtn.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold ${currentPage === totalPages ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100 border-gray-300 cursor-pointer'}`;
+        nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(false); } };
+        container.appendChild(nextBtn);
+      }
+
+      function toggleRowSelection(id) {
+        if (selectedIds.has(id)) selectedIds.delete(id);
+        else selectedIds.add(id);
+        renderTable(true);
+        updateBulkActionBar();
+      }
+
+      function openAddModal() {
+        document.getElementById('clientForm').reset();
+        document.getElementById('editClientId').value = '';
+        document.getElementById('editContactedAt').value = '';
+        document.getElementById('editOriginalStatus').value = '';
+        document.getElementById('clientNotes').value = '';
+        
+        document.getElementById('clientCategory').value = currentSection;
+        document.getElementById('clientEmployeeSelect').value = 'عبدالرحمن أبو شامة';
+        document.getElementById('clientEmployeeCustom').style.display = 'none';
+        document.getElementById('clientEmployeeCustom').value = '';
+
+        document.getElementById('modalTitle').innerText = currentSection === 'women' ? 'إضافة عميلة جديدة (قسم السيدات 🧕)' : 'إضافة عميل جديد (القسم الرجالي 👨)';
+        document.getElementById('clientModal').style.display = 'flex';
+      }
+
+      function openEditModal(client) {
+        document.getElementById('editClientId').value = client.id;
+        document.getElementById('editContactedAt').value = client.contacted_at || '';
+        document.getElementById('editOriginalStatus').value = client.status || 'لم يتم';
+        document.getElementById('clientName').value = client.name || '';
+        document.getElementById('clientPhone').value = normalizePhoneNumber(client.phone || '');
+        document.getElementById('clientAmount').value = client.amount || 0;
+        document.getElementById('clientStatus').value = client.status || 'لم يتم';
+        document.getElementById('clientCategory').value = client.category === 'women' ? 'women' : 'men';
+        document.getElementById('clientNotes').value = client.notes || '';
+
+        const empSel = document.getElementById('clientEmployeeSelect');
+        const empCustom = document.getElementById('clientEmployeeCustom');
+        const empName = client.employee || 'عبدالرحمن أبو شامة';
+
+        if (empName === 'عبدالرحمن أبو شامة' || empName === 'مسؤولة قسم السيدات' || empName === 'إبراهيم البغدادي' || empName === 'محمد مدني') {
+          empSel.value = empName;
+          empCustom.style.display = 'none';
+          empCustom.value = '';
+        } else {
+          empSel.value = 'custom';
+          empCustom.style.display = 'block';
+          empCustom.value = empName;
+        }
+
+        document.getElementById('modalTitle').innerText = 'تعديل بيانات العميل';
+        document.getElementById('clientModal').style.display = 'flex';
+      }
+
+      function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = 'none';
+      }
+
+      function renderAdminLogsTable() {
+        const tbody = document.getElementById('adminLogsTableBody');
+        const emptyEl = document.getElementById('emptyLogsState');
+        const search = (document.getElementById('logSearchInput').value || '').toLowerCase().trim();
+        const actionFilter = document.getElementById('logActionFilter').value;
+        const empFilter = document.getElementById('logEmployeeFilter').value;
+
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const empSelect = document.getElementById('logEmployeeFilter');
+        const currentEmpVal = empSelect.value;
+        const employees = [...new Set(activityLogs.map(l => l.employee).filter(Boolean))];
+        empSelect.innerHTML = '<option value="">كل الموظفين</option>';
+        employees.forEach(emp => {
+          const opt = document.createElement('option');
+          opt.value = emp;
+          opt.innerText = emp;
+          empSelect.appendChild(opt);
+        });
+        empSelect.value = currentEmpVal;
+
+        let filtered = [...activityLogs];
+        if (actionFilter) filtered = filtered.filter(l => l.action_type === actionFilter);
+        if (empFilter) filtered = filtered.filter(l => l.employee === empFilter);
+        if (search) {
+          filtered = filtered.filter(l => 
+            (l.employee || '').toLowerCase().includes(search) || 
+            (l.client_name || '').toLowerCase().includes(search) || 
+            (l.details || '').toLowerCase().includes(search) || 
+            (l.action_type || '').toLowerCase().includes(search)
+          );
+        }
+
+        if (filtered.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          emptyEl.style.display = 'none';
+        }
+
+        filtered.forEach(log => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+          tr.innerHTML = `
+            <td class="p-3 text-gray-500 font-mono text-[11px] whitespace-nowrap">${log.timestamp || '-'}</td>
+            <td class="p-3 font-bold text-gray-800">${log.employee || 'غير محدد'}</td>
+            <td class="p-3">${getActionBadge(log.action_type)}</td>
+            <td class="p-3 font-semibold text-blue-700">${log.client_name || '-'}</td>
+            <td class="p-3 text-gray-600 text-[11px] max-w-xs">${log.details || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function openDetailedMonthlyReport() {
+        const selectPicker = document.getElementById('monthlySelectPicker');
+        selectPicker.innerHTML = '';
+
+        const monthSet = new Set();
+        const now = new Date();
+        const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        monthSet.add(currentYM);
+
+        const activeClients = getActiveSectionClients();
+        activeClients.forEach(c => {
+          if (c.date && c.date.length >= 7) {
+            monthSet.add(c.date.substring(0, 7));
+          }
+        });
+
+        const sortedMonths = Array.from(monthSet).sort().reverse();
+        sortedMonths.forEach(ym => {
+          const parts = ym.split('-');
+          const y = parts[0];
+          const m = parseInt(parts[1], 10) - 1;
+          const opt = document.createElement('option');
+          opt.value = ym;
+          opt.innerText = `${arabicMonths[m] || ''} ${y}`;
+          selectPicker.appendChild(opt);
+        });
+
+        const titleEl = document.getElementById('monthlyModalTitle');
+        if (titleEl) {
+          titleEl.innerText = currentSection === 'women' ? '📊 التقرير الشهري (قسم السيدات 🧕)' : '📊 التقرير الشهري (القسم الرجالي 👨)';
+        }
+
+        selectPicker.value = currentYM;
+        renderMonthDetails(currentYM);
+
+        selectPicker.onchange = function() {
+          renderMonthDetails(this.value);
+        };
+
+        document.getElementById('monthlyModal').style.display = 'flex';
+      }
+
+      function renderMonthDetails(targetYM) {
+        const activeClients = getActiveSectionClients();
+        const monthClients = activeClients.filter(c => (c.date || '').startsWith(targetYM));
+        const total = monthClients.length;
+        const done = monthClients.filter(c => c.status === 'تم').length;
+        const noAns = monthClients.filter(c => c.status === 'لم يرد').length;
+        const pending = monthClients.filter(c => c.status === 'لم يتم').length;
+        const reminder = monthClients.filter(c => c.status === 'تذكير').length;
+        const revenue = monthClients.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+
+        const summaryCards = document.getElementById('monthlySummaryCards');
+        summaryCards.innerHTML = `
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+            <span class="text-[10px] text-gray-500 font-semibold">عملاء الشهر</span>
+            <div class="text-xl font-bold text-gray-800 mt-0.5">${total.toLocaleString('ar-EG')}</div>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+            <span class="text-[10px] text-emerald-700 font-semibold">تم التواصل</span>
+            <div class="text-xl font-bold text-emerald-600 mt-0.5">${done.toLocaleString('ar-EG')}</div>
+          </div>
+          <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center">
+            <span class="text-[10px] text-amber-700 font-semibold">في الانتظار / لم يرد</span>
+            <div class="text-xl font-bold text-amber-600 mt-0.5">${(pending + noAns).toLocaleString('ar-EG')}</div>
+          </div>
+          <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
+            <span class="text-[10px] text-blue-700 font-semibold">إجمالي المحصل</span>
+            <div class="text-xl font-bold text-blue-700 mt-0.5">${revenue.toLocaleString('ar-EG')} ج.م</div>
+          </div>
+        `;
+
+        const empMap = {};
+        monthClients.forEach(c => {
+          const emp = c.employee || 'عبدالرحمن أبو شامة';
+          if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
+          empMap[emp].total++;
+          if (c.status === 'تم') empMap[emp].done++;
+          else if (c.status === 'لم يرد') empMap[emp].noAnswer++;
+          else if (c.status === 'لم يتم') empMap[emp].pending++;
+          else if (c.status === 'تذكير') empMap[emp].reminder++;
+          empMap[emp].revenue += (parseFloat(c.amount) || 0);
+        });
+
+        const tbody = document.getElementById('monthlyEmployeeTableBody');
+        tbody.innerHTML = '';
+        const empKeys = Object.keys(empMap);
+
+        if (empKeys.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-400">لا توجد سجلات في هذا الشهر.</td></tr>';
+        } else {
+          empKeys.forEach(emp => {
+            const d = empMap[emp];
+            const rate = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+            tr.innerHTML = `
+              <td class="p-2.5 font-bold text-gray-800">${emp}</td>
+              <td class="p-2.5 font-semibold text-gray-700">${d.total.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
+              <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
+              <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      function switchSection(section) {
+        if (section === 'vip') {
+          showVipSection();
+          return;
+        }
+
+        if (currentUser && currentUser.role === 'vip') return;
+        if (currentUser && currentUser.role === 'men' && section !== 'men') return;
+        if (currentUser && currentUser.role === 'women' && section !== 'women') return;
+
+        currentSection = section;
+        selectedIds.clear();
+        currentPage = 1;
+
+        const standard = document.getElementById('standardCRMSection');
+        const vip = document.getElementById('vipCRMSection');
+        const menBtn = document.getElementById('sectionMenBtn');
+        const womBtn = document.getElementById('sectionWomenBtn');
+        const vipBtn = document.getElementById('sectionVipBtn');
+        const heroStats = document.getElementById('heroStatsContainer');
+        const heroTitle = document.getElementById('heroTitle');
+        const heroIcon = document.getElementById('heroIcon');
+
+        if (standard) standard.style.display = 'block';
+        if (vip) vip.style.display = 'none';
+        if (vipBtn) vipBtn.classList.remove('section-active');
+
+        if (section === 'women') {
+          if (menBtn) menBtn.classList.remove('section-active');
+          if (womBtn) womBtn.classList.add('section-active');
+          if (heroStats) heroStats.className = 'bg-[#fdf2f8] border border-[#fbcfe8] rounded-2xl p-6 shadow-sm';
+          if (heroTitle) heroTitle.innerText = 'إحصائيات قسم السيدات 🧕';
+          if (heroIcon) heroIcon.innerText = '🧕';
+        } else {
+          if (womBtn) womBtn.classList.remove('section-active');
+          if (menBtn) menBtn.classList.add('section-active');
+          if (heroStats) heroStats.className = 'bg-[#f2faf5] border border-[#dcf0e4] rounded-2xl p-6 shadow-sm';
+          if (heroTitle) heroTitle.innerText = 'إحصائيات الشهر الحالي (القسم الرجالي 👨)';
+          if (heroIcon) heroIcon.innerText = '👨';
+        }
+
+        updateDashboardStats();
+        updateAmountFilterOptions();
+        renderTable(false);
+        updateBulkActionBar();
+      }
+
+
+      // تطبيق الصلاحيات والواجهة حسب دور المستخدم
+      function applyUserPermissions() {
+        if (!currentUser) return;
+
+        const nameDisplay = document.getElementById('currentUserNameDisplay');
+        const roleBadge = document.getElementById('currentUserRoleBadge');
+        const adminHistoryBtn = document.getElementById('btnAdminHistory');
+        const switcherContainer = document.getElementById('sectionSwitcherContainer');
+        const vipBtn = document.getElementById('sectionVipBtn');
+
+        if (nameDisplay) nameDisplay.innerText = currentUser.name;
+
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+
+        if (currentUser.role === 'admin') {
+          if (roleBadge) {
+            roleBadge.innerText = '👑 مدير النظام';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'flex';
+          if (switcherContainer) switcherContainer.style.display = 'flex';
+          if (vipBtn) vipBtn.style.display = 'flex';
+          switchSection('men');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'men') {
+          if (roleBadge) {
+            roleBadge.innerText = '👨 عبدالرحمن أبو شامة';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          switchSection('men');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'women') {
+          if (roleBadge) {
+            roleBadge.innerText = '🧕 موظفة سيدات';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          switchSection('women');
+          fetchClientsFromCloud(false);
+        } else if (currentUser.role === 'vip') {
+          if (roleBadge) {
+            roleBadge.innerText = '⭐ مستخدم VIP';
+            roleBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+          }
+          if (adminHistoryBtn) adminHistoryBtn.style.display = 'none';
+          if (switcherContainer) switcherContainer.style.display = 'none';
+          if (vipBtn) vipBtn.style.display = 'none';
+          showVipSection();
+        } else {
+          localStorage.removeItem('crm_logged_user');
+          currentUser = null;
+          document.getElementById('mainApp').style.display = 'none';
+          document.getElementById('loginScreen').style.display = 'flex';
+        }
+      }
+
+
+      async function startApp() {
+        initDateHeader();
+        await fetchSettingsFromCloud();
+        setupRealtimeListener();
+
+        // فحص الجلسة المحفوظة في localStorage
+        const savedSession = localStorage.getItem('crm_logged_user');
+        if (savedSession) {
+          try {
+            const parsedSession = JSON.parse(savedSession);
+            if (
+              parsedSession &&
+              parsedSession.role === 'vip' &&
+              (!cloudUsers.vip.enabled || String(parsedSession.username || '').toLowerCase() !== cloudUsers.vip.username)
+            ) {
+              localStorage.removeItem('crm_logged_user');
+              currentUser = null;
+            } else {
+              currentUser = parsedSession;
+              applyUserPermissions();
+            }
+          } catch (e) {
+            localStorage.removeItem('crm_logged_user');
+          }
+        }
+
+        // تسجيل الدخول
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const userInp = document.getElementById('loginUsername').value.trim().toLowerCase();
+          const passInp = document.getElementById('loginPassword').value.trim();
+          const errorAlert = document.getElementById('loginErrorAlert');
+          const submitBtn = document.getElementById('loginSubmitBtn');
+
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'جاري التحقق من السحابة...';
+
+          // جلب أحدث كلمات السر من السحابة قبل التحقق للتأكد من المزامنة
+          await fetchSettingsFromCloud();
+
+          let matched = null;
+          if (userInp === 'admin' && passInp === cloudUsers.admin.pass) {
+            matched = { username: 'admin', role: 'admin', name: cloudUsers.admin.name };
+          } else if (userInp === 'men' && passInp === cloudUsers.men.pass) {
+            matched = { username: 'men', role: 'men', name: cloudUsers.men.name };
+          } else if (userInp === 'women' && passInp === cloudUsers.women.pass) {
+            matched = { username: 'women', role: 'women', name: cloudUsers.women.name };
+          } else if (
+            cloudUsers.vip.enabled &&
+            cloudUsers.vip.username &&
+            userInp === cloudUsers.vip.username &&
+            passInp === cloudUsers.vip.pass
+          ) {
+            matched = { username: cloudUsers.vip.username, role: 'vip', name: cloudUsers.vip.name || 'مستخدم VIP' };
+          }
+
+          if (matched) {
+            followUpPopupShownForSession = false;
+            currentUser = matched;
+            localStorage.setItem('crm_logged_user', JSON.stringify(currentUser));
+            logActivity('تسجيل دخول', currentUser.name, '-', 'تم تسجيل الدخول بنجاح للنظام');
+            errorAlert.style.display = 'none';
+            applyUserPermissions();
+          } else {
+            errorAlert.innerText = 'اسم المستخدم أو كلمة المرور غير صحيحة، يرجى المحاولة مجدداً.';
+            errorAlert.style.display = 'block';
+          }
+
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'تسجيل الدخول للمنظومة 🚀';
+        });
+
+        // تسجيل الخروج
+        document.getElementById('btnLogout').addEventListener('click', function() {
+          if (confirm('هل ترغب بالتأكيد في تسجيل الخروج؟')) {
+            localStorage.removeItem('crm_logged_user');
+            followUpPopupShownForSession = false;
+            closeMonthlyFollowUpPopup();
+            currentUser = null;
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginScreen').style.display = 'flex';
+          }
+        });
+
+        const closeMonthlyFollowUpBtn = document.getElementById('closeMonthlyFollowUpBtn');
+        const dismissMonthlyFollowUpBtn = document.getElementById('dismissMonthlyFollowUpBtn');
+        const monthlyFollowUpModal = document.getElementById('monthlyFollowUpModal');
+
+        if (closeMonthlyFollowUpBtn) closeMonthlyFollowUpBtn.addEventListener('click', closeMonthlyFollowUpPopup);
+        if (dismissMonthlyFollowUpBtn) dismissMonthlyFollowUpBtn.addEventListener('click', closeMonthlyFollowUpPopup);
+        if (monthlyFollowUpModal) {
+          monthlyFollowUpModal.addEventListener('click', function(e) {
+            if (e.target === monthlyFollowUpModal) closeMonthlyFollowUpPopup();
+          });
+        }
+
+        const phoneInput = document.getElementById('clientPhone');
+        if (phoneInput) {
+          phoneInput.addEventListener('blur', function() {
+            this.value = normalizePhoneNumber(this.value);
+          });
+        }
+
+        document.getElementById('sectionMenBtn').addEventListener('click', () => {
+          if (currentUser && currentUser.role === 'admin') switchSection('men');
+        });
+
+        document.getElementById('sectionWomenBtn').addEventListener('click', () => {
+          if (currentUser && currentUser.role === 'admin') switchSection('women');
+        });
+
+        document.getElementById('sectionVipBtn').addEventListener('click', () => {
+          if (currentUser && currentUser.role === 'admin') switchSection('vip');
+        });
+
+        const vipSearchInput = document.getElementById('vipSearchInput');
+        const vipWhatsAppFilter = document.getElementById('vipWhatsAppFilter');
+        const vipSupportFilter = document.getElementById('vipSupportFilter');
+        const btnVipImport = document.getElementById('btnVipImport');
+        const vipFileInput = document.getElementById('vipFileInput');
+        const btnVipExport = document.getElementById('btnVipExport');
+
+        if (vipSearchInput) vipSearchInput.addEventListener('input', renderVipTable);
+        if (vipWhatsAppFilter) vipWhatsAppFilter.addEventListener('change', renderVipTable);
+        if (vipSupportFilter) vipSupportFilter.addEventListener('change', renderVipTable);
+        if (btnVipImport) btnVipImport.addEventListener('click', () => {
+          if (!canAccessVip()) return alert('غير مصرح بالدخول لقسم VIP.');
+          vipFileInput.click();
+        });
+        if (vipFileInput) vipFileInput.addEventListener('change', async function(e) {
+          const file = e.target.files[0];
+          if (file) await importVipFile(file);
+          e.target.value = '';
+        });
+        if (btnVipExport) btnVipExport.addEventListener('click', exportVipClients);
+
+        document.getElementById('clientEmployeeSelect').addEventListener('change', function() {
+          const customInp = document.getElementById('clientEmployeeCustom');
+          if (this.value === 'custom') {
+            customInp.style.display = 'block';
+            customInp.focus();
+          } else {
+            customInp.style.display = 'none';
+          }
+        });
+
+        document.getElementById('pageSizeSelect').addEventListener('change', function() {
+          pageSize = parseInt(this.value, 10) || 50;
+          currentPage = 1;
+          renderTable(false);
+        });
+
+        // زر تنظيف وحذف المكررات
+        document.getElementById('btnRemoveDuplicates').addEventListener('click', () => removeDuplicateClients(true));
+
+        // فتح لوحة الأدمن (للأدمن فقط)
+        document.getElementById('btnAdminHistory').addEventListener('click', async function() {
+          if (currentUser && currentUser.role === 'admin') {
+            await fetchSettingsFromCloud();
+            renderAdminPassCards();
+            fetchActivityLogs();
+            document.getElementById('adminHistoryModal').style.display = 'flex';
+          } else {
+            alert('هذه المنطقة مخصصة للمدير العام فقط.');
+          }
+        });
+
+        document.getElementById('closeAdminHistoryBtn').addEventListener('click', () => {
+          document.getElementById('adminHistoryModal').style.display = 'none';
+        });
+
+        // ✅ تغيير باسورد الأدمن ومزامنته سحابياً
+        document.getElementById('btnChangeAdminPass').addEventListener('click', async function() {
+          const currentPin = prompt('أدخل كلمة المرور الحالية للأدمن للتأكيد:');
+          if (currentPin && currentPin.trim() === cloudUsers.admin.pass) {
+            const newPin = prompt('أدخل كلمة المرور الجديدة لحساب الأدمن:');
+            if (newPin && newPin.trim().length >= 3) {
+              const success = await updateCloudPassword('pass_admin', newPin.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تحديث كلمة مرور حساب الأدمن ومزامنتها سحابياً');
+                alert('تم تحديث كلمة مرور الأدمن ومزامنتها سحابياً بنجاح 🔒');
+              }
+            } else if (newPin !== null) {
+              alert('يجب أن تتكون كلمة المرور من 3 خانات على الأقل.');
+            }
+          } else if (currentPin !== null) {
+            alert('كلمة المرور الحالية غير صحيحة.');
+          }
+        });
+
+        // ✅ تغيير باسورد موظف الرجال ومزامنته سحابياً
+        document.getElementById('btnChangeMenPass').addEventListener('click', async function() {
+          const adminCheck = prompt('أدخل كلمة مرور الأدمن للموافقة على تغيير باسورد موظف الرجال:');
+          if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+            const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لموظف الرجال (user: men):');
+            if (newPass && newPass.trim().length >= 3) {
+              const success = await updateCloudPassword('pass_men', newPass.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب موظف الرجال ومزامنتها');
+                alert('تم تحديث كلمة مرور حساب الرجال ومزامنتها بنجاح 👨🔒.');
+              }
+            } else if (newPass !== null) {
+              alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
+            }
+          } else if (adminCheck !== null) {
+            alert('كلمة مرور الأدمن غير صحيحة.');
+          }
+        });
+
+        // ✅ تغيير باسورد مسؤولة السيدات ومزامنته سحابياً
+        document.getElementById('btnChangeWomenPass').addEventListener('click', async function() {
+          const adminCheck = prompt('أدخل كلمة مرور الأدمن للموافقة على تغيير باسورد مسؤولة السيدات:');
+          if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+            const newPass = prompt('أدخل كلمة المرور الجديدة المخصصة لمسؤولة السيدات (user: women):');
+            if (newPass && newPass.trim().length >= 3) {
+              const success = await updateCloudPassword('pass_women', newPass.trim());
+              if (success) {
+                logActivity('أمان وكلمات سر', 'الأدمن', '-', 'تم تعديل كلمة مرور حساب مسؤولة السيدات ومزامنتها');
+                alert('تم تحديث كلمة مرور حساب السيدات ومزامنتها بنجاح 🧕🔒.');
+              }
+            } else if (newPass !== null) {
+              alert('كلمة المرور يجب أن تكون 3 خانات على الأقل.');
+            }
+          } else if (adminCheck !== null) {
+            alert('كلمة مرور الأدمن غير صحيحة.');
+          }
+        });
+
+        const btnSaveVipUser = document.getElementById('btnSaveVipUser');
+        if (btnSaveVipUser) {
+          btnSaveVipUser.addEventListener('click', async function() {
+            const adminCheck = prompt('أدخل كلمة مرور الأدمن لتأكيد حفظ أو تعديل حساب VIP:');
+            if (adminCheck && adminCheck.trim() === cloudUsers.admin.pass) {
+              await saveVipUserSettings();
+            } else if (adminCheck !== null) {
+              alert('كلمة مرور الأدمن غير صحيحة.');
+            }
+          });
+        }
+
+        document.getElementById('logSearchInput').addEventListener('input', renderAdminLogsTable);
+        document.getElementById('logActionFilter').addEventListener('change', renderAdminLogsTable);
+        document.getElementById('logEmployeeFilter').addEventListener('change', renderAdminLogsTable);
+
+        document.getElementById('btnExportLogs').addEventListener('click', function() {
+          if (activityLogs.length === 0) return alert('لا توجد حركات مسجلة لتصديرها.');
+          const exportData = activityLogs.map(l => ({
+            'التوقيت والتاريخ': l.timestamp || '',
+            'اسم الموظف': l.employee || '',
+            'نوع الحركة': l.action_type || '',
+            'العميل المستهدف': l.client_name || '',
+            'التفاصيل': l.details || ''
+          }));
+          const ws = XLSX.utils.json_to_sheet(exportData);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'سجل_نشاطات_الموظفين');
+          XLSX.writeFile(wb, 'Admin_Audit_History.xlsx');
+        });
+
+        document.getElementById('tab-all').addEventListener('click', () => setTab('الكل', 'tab-all'));
+        document.getElementById('tab-done').addEventListener('click', () => setTab('تم', 'tab-done'));
+        document.getElementById('tab-pending').addEventListener('click', () => setTab('لم يتم', 'tab-pending'));
+        document.getElementById('tab-noanswer').addEventListener('click', () => setTab('لم يرد', 'tab-noanswer'));
+        document.getElementById('tab-reminder').addEventListener('click', () => setTab('تذكير', 'tab-reminder'));
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(() => {
+            currentPage = 1;
+            renderTable(false);
+          }, 200);
+        });
+
+        document.getElementById('amountFilter').addEventListener('change', function() {
+          currentPage = 1;
+          selectedIds.clear();
+          renderTable(false);
+          updateBulkActionBar();
+        });
+
+        document.getElementById('statusFilter').addEventListener('change', function() {
+          const statusValue = this.value;
+          const tabMap = {
+            '': 'tab-all',
+            'تم': 'tab-done',
+            'لم يتم': 'tab-pending',
+            'لم يرد': 'tab-noanswer',
+            'تذكير': 'tab-reminder'
+          };
+
+          selectedIds.clear();
+          setTab(statusValue || 'الكل', tabMap[statusValue] || 'tab-all');
+          updateBulkActionBar();
+        });
+
+        document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+          let filtered = getFilteredClientsForTable();
+
+          const startIndex = (currentPage - 1) * pageSize;
+          const endIndex = Math.min(startIndex + pageSize, filtered.length);
+          const pageItems = filtered.slice(startIndex, endIndex);
+
+          if (this.checked) {
+            pageItems.forEach(c => selectedIds.add(String(c.id)));
+          } else {
+            pageItems.forEach(c => selectedIds.delete(String(c.id)));
+          }
+          renderTable(true);
+          updateBulkActionBar();
+        });
+
+        document.getElementById('btnBulkDelete').addEventListener('click', async function() {
+          const count = selectedIds.size;
+          if (count === 0) return;
+
+          if (confirm(`هل أنت متأكد من حذف ${count} عميل محدد من السحابة نهائياً؟`)) {
+            if (supabase) {
+              const idsArray = Array.from(selectedIds);
+              const chunkSize = 200;
+              let hasError = false;
+
+              for (let i = 0; i < idsArray.length; i += chunkSize) {
+                const chunk = idsArray.slice(i, i + chunkSize);
+                const { error } = await supabase.from('clients').delete().in('id', chunk);
+                if (error) {
+                  hasError = true;
+                  alert('خطأ أثناء الحذف: ' + error.message);
+                  break;
+                }
+              }
+
+              if (!hasError) {
+                logActivity('حذف متعدد', currentUser ? currentUser.name : 'موظف', `${count} عملاء`, `تم إجراء حذف جماعي لعدد ${count} عميل دفعة واحدة`);
+                selectedIds.clear();
+                updateBulkActionBar();
+                fetchClientsFromCloud(true);
+              }
+            }
+          }
+        });
+
+        document.getElementById('btnBulkCancel').addEventListener('click', function() {
+          selectedIds.clear();
+          renderTable(true);
+          updateBulkActionBar();
+        });
+
+        document.getElementById('btnAddClient').addEventListener('click', openAddModal);
+        document.getElementById('closeClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
+        document.getElementById('cancelClientModalBtn').addEventListener('click', () => closeModal('clientModal'));
+
+        // إرسال نموذج العميل مع فحص التكرار
+        document.getElementById('clientForm').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const submitBtn = document.getElementById('saveClientSubmitBtn');
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'جاري الحفظ...';
+
+          const id = document.getElementById('editClientId').value;
+          const statusVal = document.getElementById('clientStatus').value;
+          const originalStatusVal = document.getElementById('editOriginalStatus').value;
+          const categoryVal = document.getElementById('clientCategory').value || 'men';
+          let contactedAtVal = document.getElementById('editContactedAt').value;
+          const todayStr = new Date().toISOString().split('T')[0];
+
+          // عند أول تواصل أو تغيير حالة التواصل من شاشة التعديل، حدّث "آخر تواصل"
+          if (
+            statusVal !== 'لم يتم' &&
+            (!contactedAtVal || (id && originalStatusVal && originalStatusVal !== statusVal))
+          ) {
+            contactedAtVal = getCurrentFormattedTimestamp();
+          }
+
+          const rawPhone = document.getElementById('clientPhone').value;
+          const finalPhone = normalizePhoneNumber(rawPhone);
+
+          // فحص التكرار عند إضافة عميل جديد
+          if (!id && finalPhone) {
+            const existingClient = clients.find(c => normalizePhoneNumber(c.phone) === finalPhone && (c.category || 'men') === categoryVal);
+            if (existingClient) {
+              if (!confirm(`⚠️ هذا الرقم (${finalPhone}) مسجل بالفعل باسم "${existingClient.name}". هل ترغب في المتابعة وإضافته على أي حال؟`)) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'حفظ في السحابة';
+                return;
+              }
+            }
+          }
+
+          const empSelectVal = document.getElementById('clientEmployeeSelect').value;
+          let assignedEmployee = 'عبدالرحمن أبو شامة';
+
+          if (empSelectVal === 'custom') {
+            assignedEmployee = document.getElementById('clientEmployeeCustom').value.trim() || 'عبدالرحمن أبو شامة';
+          } else if (empSelectVal) {
+            assignedEmployee = empSelectVal;
+          }
+
+          const clientPayload = {
+            name: document.getElementById('clientName').value.trim(),
+            phone: finalPhone,
+            amount: parseFloat(document.getElementById('clientAmount').value) || 0,
+            status: statusVal,
+            category: categoryVal,
+            employee: assignedEmployee,
+            notes: document.getElementById('clientNotes').value.trim(),
+            contacted_at: contactedAtVal,
+            date: todayStr
+          };
+
+          if (supabase) {
+            try {
+              let res;
+              if (id) {
+                res = await supabase.from('clients').update(clientPayload).eq('id', id);
+              } else {
+                res = await supabase.from('clients').insert([clientPayload]);
+              }
+
+              if (res.error && res.error.message && res.error.message.includes('category')) {
+                delete clientPayload.category;
+                if (id) res = await supabase.from('clients').update(clientPayload).eq('id', id);
+                else res = await supabase.from('clients').insert([clientPayload]);
+              }
+
+              if (res.error) {
+                alert('فشل الحفظ في السحابة: ' + res.error.message);
+              } else {
+                logActivity(
+                  id ? 'تعديل بيانات' : 'إضافة عميل',
+                  currentUser ? currentUser.name : clientPayload.employee,
+                  clientPayload.name,
+                  `تم ${id ? 'تعديل' : 'إضافة'} بيانات العميل (${clientPayload.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي'}) - الهاتف: [${clientPayload.phone}]`
+                );
+                closeModal('clientModal');
+                fetchClientsFromCloud(true);
+              }
+            } catch (err) {
+              alert('خطأ في الاتصال: ' + err.message);
+            }
+          }
+
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'حفظ في السحابة';
+        });
+
+        // استيراد شيت مع فلترة وحذف المكررات تلقائياً
+        document.getElementById('btnImport').addEventListener('click', () => {
+          document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (!file || !supabase) return;
+
+          const reader = new FileReader();
+          reader.onload = async function(evt) {
+            try {
+              const data = new Uint8Array(evt.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+              const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+              const todayStr = new Date().toISOString().split('T')[0];
+
+              const rowsToInsert = [];
+              const seenPhonesInImport = new Set();
+              
+              // تجميع أرقام الهواتف الموجودة مسبقاً في المنظومة لتجنب التكرار
+              const existingDatabasePhones = new Set();
+              clients.forEach(c => {
+                const norm = normalizePhoneNumber(c.phone);
+                if (norm) existingDatabasePhones.add(`${c.category || 'men'}_${norm}`);
+              });
+
+              let duplicateCount = 0;
+
+              jsonData.forEach(row => {
+                const name = row['الاسم'] || row['اسم العميل'] || row['Name'] || '';
+                const rawPhone = row['الرقم'] || row['رقم الهاتف'] || row['الهاتف'] || row['Phone'] || row['الموبايل'] || row['رقم الواتساب'] || '';
+                const phone = normalizePhoneNumber(rawPhone);
+                const amountRaw = row['المبلغ'] || row['Amount'] || 0;
+                const amount = parseFloat(String(amountRaw).replace(/[^0-9.]/g, '')) || 0;
+                
+                let status = String(row['حالة التواصل'] || row['Status'] || 'لم يتم').trim();
+                let contactedAt = row['آخر تواصل'] || row['تاريخ ووقت التواصل'] || row['وقت التواصل'] || '';
+
+                if (status.includes('تم') && !status.includes('لم')) {
+                  status = 'تم';
+                } else if (status.includes('لم يرد')) {
+                  status = 'لم يرد';
+                } else if (status.includes('تذكير')) {
+                  status = 'تذكير';
+                } else {
+                  status = 'لم يتم';
+                }
+
+                if (status !== 'لم يتم' && !contactedAt) {
+                  contactedAt = getCurrentFormattedTimestamp();
+                }
+
+                const categoryRaw = String(row['القسم'] || row['التصنيف'] || row['النوع'] || row['الجنس'] || '').toLowerCase();
+                let category = (currentSection === 'women') ? 'women' : 'men';
+                if (categoryRaw.includes('سيدات') || categoryRaw.includes('أنثى') || categoryRaw.includes('نساء') || categoryRaw.includes('بنات') || categoryRaw.includes('women') || categoryRaw.includes('female')) {
+                  category = 'women';
+                } else if (categoryRaw.includes('رجال') || categoryRaw.includes('ذكر') || categoryRaw.includes('شباب') || categoryRaw.includes('men') || categoryRaw.includes('male')) {
+                  category = 'men';
+                }
+
+                let employee = row['الموظف اللي تواصل'] || row['الموظف'] || row['Employee'] || '';
+                if (!employee || employee.trim() === '' || employee.trim() === 'غير محدد') {
+                  employee = 'عبدالرحمن أبو شامة';
+                }
+
+                const notes = row['الملاحظات'] || row['ملاحظات'] || row['Notes'] || '';
+
+                if (name || phone) {
+                  const phoneKey = `${category}_${phone}`;
+                  
+                  // فلترة المكرر سواء كان مكرراً في الشيت نفسه أو موجوداً مسبقاً في الداتابيز
+                  if (phone && (seenPhonesInImport.has(phoneKey) || existingDatabasePhones.has(phoneKey))) {
+                    duplicateCount++;
+                    return; // تخطي الرقم المكرر
+                  }
+
+                  if (phone) seenPhonesInImport.add(phoneKey);
+
+                  rowsToInsert.push({
+                    name: String(name || 'عميل').trim(),
+                    phone: phone,
+                    amount: amount,
+                    status: status,
+                    category: category,
+                    employee: String(employee).trim(),
+                    notes: String(notes).trim(),
+                    contacted_at: contactedAt,
+                    date: todayStr
+                  });
+                }
+              });
+
+              if (rowsToInsert.length > 0) {
+                const statusEl = document.getElementById('syncStatus');
+                const CHUNK_SIZE = 500;
+                const totalChunks = Math.ceil(rowsToInsert.length / CHUNK_SIZE);
+
+                for (let i = 0; i < totalChunks; i++) {
+                  const chunk = rowsToInsert.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                  if (statusEl) {
+                    statusEl.innerText = `⏳ جاري رفع الدفعة ${i + 1} من ${totalChunks}...`;
+                  }
+                  let { error } = await supabase.from('clients').insert(chunk);
+
+                  if (error && error.message && error.message.includes('category')) {
+                    const fallbackChunk = chunk.map(item => {
+                      const copy = { ...item };
+                      delete copy.category;
+                      return copy;
+                    });
+                    const retry = await supabase.from('clients').insert(fallbackChunk);
+                    error = retry.error;
+                  }
+
+                  if (error) {
+                    throw new Error(`خطأ في الدفعة ${i + 1}: ` + error.message);
+                  }
+                }
+
+                logActivity('استيراد شيت', currentUser ? currentUser.name : 'النظام', `${rowsToInsert.length} عملاء`, `تم استيراد ${rowsToInsert.length} عميل جديد وتخطي ${duplicateCount} رقم مكرر تلقائياً`);
+                alert(`✅ تم استيراد ${rowsToInsert.length.toLocaleString('ar-EG')} عميل جديد بنجاح.\n🧹 تم تخطي وفلترة ${duplicateCount.toLocaleString('ar-EG')} رقم مكرر تلقائياً لمنع الازدواجية.`);
+                fetchClientsFromCloud(true);
+              } else {
+                alert(`⚠️ لم تتم إضافة أي عملاء جدد (تم العثور على ${duplicateCount.toLocaleString('ar-EG')} رقم مكرر مسجل بالفعل).`);
+              }
+            } catch (err) {
+              alert('خطأ أثناء معالجة الملف: ' + err.message);
+            } finally {
+              e.target.value = '';
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        });
+
+        // تصدير إكسل
+        document.getElementById('btnExport').addEventListener('click', function() {
+          const activeClients = getActiveSectionClients();
+          if (activeClients.length === 0) return alert('لا توجد بيانات لتصديرها في هذا القسم.');
+          const exportData = activeClients.map(c => ({
+            'اسم العميل': c.name || '',
+            'رقم الهاتف': normalizePhoneNumber(c.phone || ''),
+            'المبلغ المدفوع': c.amount || 0,
+            'الفئة': calculateTier(c.amount),
+            'القسم': c.category === 'women' ? 'قسم السيدات' : 'القسم الرجالي',
+            'حالة التواصل': c.status || 'لم يتم',
+            'آخر تواصل': c.contacted_at || '',
+            'الموظف المسؤول': c.employee || 'عبدالرحمن أبو شامة',
+            'تاريخ الإضافة': c.date || '',
+            'الملاحظات': c.notes || ''
+          }));
+          const ws = XLSX.utils.json_to_sheet(exportData);
+          const wb = XLSX.utils.book_new();
+          const sheetName = currentSection === 'women' ? 'عميلات_السيدات' : 'العملاء_الرجال';
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          XLSX.writeFile(wb, `${sheetName}_CRM.xlsx`);
+        });
+
+        // إحصائيات الموظفين
+        document.getElementById('btnEmployeeStats').addEventListener('click', function() {
+          const activeClients = getActiveSectionClients();
+          const empMap = {};
+          
+          DEFAULT_EMPLOYEES.forEach(emp => {
+            empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
+          });
+
+          activeClients.forEach(c => {
+            const emp = c.employee || 'عبدالرحمن أبو شامة';
+            if (!empMap[emp]) empMap[emp] = { total: 0, done: 0, noAnswer: 0, pending: 0, reminder: 0, revenue: 0 };
+            empMap[emp].total++;
+            if (c.status === 'تم') empMap[emp].done++;
+            else if (c.status === 'لم يرد') empMap[emp].noAnswer++;
+            else if (c.status === 'لم يتم') empMap[emp].pending++;
+            else if (c.status === 'تذكير') empMap[emp].reminder++;
+            empMap[emp].revenue += (parseFloat(c.amount) || 0);
+          });
+
+          const modalTitle = document.getElementById('employeeModalTitle');
+          if (modalTitle) {
+            modalTitle.innerText = currentSection === 'women' ? '👥 تقرير أداء وتوزيع الموظفين (قسم السيدات 🧕)' : '👥 تقرير أداء وتوزيع الموظفين (القسم الرجالي 👨)';
+          }
+
+          const tbody = document.getElementById('employeeTableBody');
+          tbody.innerHTML = '';
+          const keys = Object.keys(empMap);
+          if (keys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-gray-400">لا توجد بيانات موظفين مسجلة بعد.</td></tr>';
+          } else {
+            keys.forEach(emp => {
+              const d = empMap[emp];
+              const rate = d.total > 0 ? Math.round((d.done / d.total) * 100) : 0;
+              const tr = document.createElement('tr');
+              tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+              tr.innerHTML = `
+                <td class="p-2.5 font-bold text-gray-800">${emp}</td>
+                <td class="p-2.5 font-semibold">${d.total.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-emerald-600 font-bold">${d.done.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-red-500 font-bold">${d.noAnswer.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 text-amber-500 font-bold">${d.pending.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 font-bold text-blue-500">${d.reminder.toLocaleString('ar-EG')}</td>
+                <td class="p-2.5 font-bold text-blue-700">${d.revenue.toLocaleString('ar-EG')} ج.م</td>
+                <td class="p-2.5 font-bold text-gray-700">${rate}%</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          }
+          document.getElementById('employeeModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeEmployeeModalBtn').addEventListener('click', () => closeModal('employeeModal'));
+
+        // التقرير الشهري التفصيلي
+        document.getElementById('btnMonthlyReport').addEventListener('click', openDetailedMonthlyReport);
+        document.getElementById('closeMonthlyModalBtn').addEventListener('click', () => closeModal('monthlyModal'));
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startApp);
+      } else {
+        startApp();
+      }
+    })();
+  </script>
+</body>
+</html>
