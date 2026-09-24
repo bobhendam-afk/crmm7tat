@@ -632,6 +632,17 @@
             <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع شيت VIP كما هو</button>
             <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
             <button type="button" id="btnVipSelectFiltered" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">☑️ تحديد النتائج الظاهرة</button>
+            <div id="vipBulkSupportControl" class="items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-1.5" style="display:none;">
+              <select id="vipBulkSupportSelect" class="bg-white border border-amber-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-700 outline-none focus:border-amber-500 cursor-pointer">
+                <option value="">تغيير حالة الدعم...</option>
+                <option value="غير محدد">غير محدد</option>
+                <option value="شهري">شهري</option>
+                <option value="كل 3 شهور">كل 3 شهور</option>
+                <option value="كل 6 شهور">كل 6 شهور</option>
+                <option value="سنوي">سنوي</option>
+              </select>
+              <button type="button" id="btnVipApplySupport" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition cursor-pointer">تطبيق على المحدد</button>
+            </div>
             <button type="button" id="btnVipDeleteSelected" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer" style="display:none;">🗑️ حذف المحدد (<span id="vipSelectedCount">0</span>)</button>
             <button type="button" id="btnVipClearSelection" class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">✖️ إلغاء التحديد</button>
             <button type="button" id="btnVipDeleteAll" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer" style="display:none;">⚠️ مسح كل بيانات VIP</button>
@@ -1506,6 +1517,7 @@
         const selectedCount = document.getElementById('vipSelectedCount');
         const deleteSelectedBtn = document.getElementById('btnVipDeleteSelected');
         const clearBtn = document.getElementById('btnVipClearSelection');
+        const bulkSupportControl = document.getElementById('vipBulkSupportControl');
         const deleteAllBtn = document.getElementById('btnVipDeleteAll');
         const selectFilteredBtn = document.getElementById('btnVipSelectFiltered');
         const selectAll = document.getElementById('vipSelectAllCheckbox');
@@ -1513,6 +1525,7 @@
         if (selectedCount) selectedCount.innerText = selectedVipIds.size.toLocaleString('ar-EG');
         if (deleteSelectedBtn) deleteSelectedBtn.style.display = isAdmin && selectedVipIds.size > 0 ? 'inline-flex' : 'none';
         if (clearBtn) clearBtn.style.display = isAdmin && selectedVipIds.size > 0 ? 'inline-flex' : 'none';
+        if (bulkSupportControl) bulkSupportControl.style.display = isAdmin && selectedVipIds.size > 0 ? 'inline-flex' : 'none';
         if (deleteAllBtn) deleteAllBtn.style.display = isAdmin && vipClients.length > 0 ? 'inline-flex' : 'none';
         if (selectFilteredBtn) selectFilteredBtn.style.display = isAdmin && data.length > 0 ? 'inline-flex' : 'none';
 
@@ -1660,6 +1673,69 @@
         } catch (e) {
           alert('تعذر حذف بيانات VIP: ' + (e.message || e));
           return false;
+        }
+      }
+
+      async function updateSelectedVipSupportStatus() {
+        if (!supabase || !currentUser || currentUser.role !== 'admin') {
+          return alert('تعديل حالة الدعم الجماعي متاح للإدارة فقط.');
+        }
+
+        const ids = Array.from(selectedVipIds);
+        if (ids.length === 0) return alert('حدد صف أو أكثر أولاً.');
+
+        const selectEl = document.getElementById('vipBulkSupportSelect');
+        const applyBtn = document.getElementById('btnVipApplySupport');
+        const newStatus = String(selectEl ? selectEl.value : '').trim();
+        if (!newStatus) return alert('اختر حالة الدعم الجديدة أولاً.');
+
+        if (!confirm(`سيتم تغيير حالة الدعم لعدد ${ids.length.toLocaleString('ar-EG')} عميل إلى «${newStatus}». هل تريد المتابعة؟`)) return;
+
+        const originalText = applyBtn ? applyBtn.innerText : 'تطبيق على المحدد';
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.innerText = 'جاري التحديث...';
+        }
+
+        try {
+          const chunkSize = 200;
+          const updatedAt = new Date().toISOString();
+          for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            const { error } = await supabase
+              .from('vip_clients')
+              .update({ support_status: newStatus, updated_at: updatedAt })
+              .in('id', chunk);
+            if (error) throw error;
+          }
+
+          const idSet = new Set(ids.map(String));
+          vipClients.forEach(client => {
+            if (idSet.has(String(client.id))) client.support_status = newStatus;
+          });
+
+          updateVipDashboard();
+          refreshVipFilterOptions();
+          renderVipTable();
+
+          if (selectEl) selectEl.value = '';
+
+          logActivity(
+            'VIP تعديل جماعي',
+            currentUser.name,
+            `${ids.length} عميل VIP`,
+            `تم تغيير حالة الدعم إلى «${newStatus}» لعدد ${ids.length} عميل محدد`
+          );
+
+          alert(`✅ تم تغيير حالة الدعم إلى «${newStatus}» لعدد ${ids.length.toLocaleString('ar-EG')} عميل.`);
+        } catch (e) {
+          alert('تعذر تغيير حالة الدعم للمحدد: ' + (e.message || e));
+          await fetchVipClients();
+        } finally {
+          if (applyBtn) {
+            applyBtn.disabled = false;
+            applyBtn.innerText = originalText;
+          }
         }
       }
 
@@ -3717,6 +3793,7 @@
         const btnVipSelectFiltered = document.getElementById('btnVipSelectFiltered');
         const btnVipDeleteSelected = document.getElementById('btnVipDeleteSelected');
         const btnVipClearSelection = document.getElementById('btnVipClearSelection');
+        const btnVipApplySupport = document.getElementById('btnVipApplySupport');
         const btnVipDeleteAll = document.getElementById('btnVipDeleteAll');
 
         if (vipSearchInput) vipSearchInput.addEventListener('input', renderVipTable);
@@ -3757,6 +3834,7 @@
           renderVipTable();
         });
         if (btnVipSelectFiltered) btnVipSelectFiltered.addEventListener('click', selectAllFilteredVip);
+        if (btnVipApplySupport) btnVipApplySupport.addEventListener('click', updateSelectedVipSupportStatus);
         if (btnVipDeleteSelected) btnVipDeleteSelected.addEventListener('click', deleteSelectedVipClients);
         if (btnVipClearSelection) btnVipClearSelection.addEventListener('click', clearVipSelection);
         if (btnVipDeleteAll) btnVipDeleteAll.addEventListener('click', deleteAllVipClients);
