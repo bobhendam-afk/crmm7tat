@@ -625,11 +625,11 @@
 
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="text-xs text-gray-500 font-semibold">
-            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV بأي ترتيب للأعمدة</span>، والنظام هيكتشف تلقائياً: الاسم، الرقم، حالة واتساب، حالة الدعم والمبلغ. حتى لو فيه عنوان أو صفوف زيادة قبل الجدول.
+            ارفع ملف <span class="font-bold text-gray-700">Excel أو CSV</span>، وسيتم إدخال الصفوف بنفس ترتيب الشيت وبنفس قيم الاسم والرقم وحالة واتساب وحالة الدعم والمبلغ، بدون تخمين أو تعديل تلقائي.
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" id="btnVipAddClient" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">➕ إضافة عميل VIP</button>
-            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع أي شيت VIP</button>
+            <button type="button" id="btnVipImport" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">📥 رفع شيت VIP كما هو</button>
             <button type="button" id="btnVipExport" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer">⬇️ تصدير VIP</button>
             <button type="button" id="btnVipSelectFiltered" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer" style="display:none;">☑️ تحديد النتائج الظاهرة</button>
             <button type="button" id="btnVipDeleteSelected" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer" style="display:none;">🗑️ حذف المحدد (<span id="vipSelectedCount">0</span>)</button>
@@ -1417,13 +1417,17 @@
       }
 
       function buildVipStatusOptions(currentValue, commonValues) {
-        const current = String(currentValue || '').trim();
+        const current = String(currentValue ?? '');
         const values = [];
-        if (current) values.push(current);
+        if (current === '') values.push('');
+        else values.push(current);
         commonValues.forEach(v => {
           if (!values.includes(v)) values.push(v);
         });
-        return values.map(v => `<option value="${escapeHtml(v)}" ${v === current ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+        return values.map(v => {
+          const label = v === '' ? '—' : v;
+          return `<option value="${escapeHtml(v)}" ${v === current ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+        }).join('');
       }
 
       function refreshVipFilterOptions() {
@@ -1433,8 +1437,17 @@
 
         const currentWhats = whatsappFilter.value;
         const currentSupport = supportFilter.value;
-        const whatsappValues = ['لم يتم', 'تم', 'لم يرد', 'متابعة'];
-        const supportValues = ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'];
+        const defaultWhats = ['لم يتم', 'تم', 'لم يرد', 'متابعة'];
+        const defaultSupport = ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'];
+
+        const whatsappValues = [...defaultWhats];
+        const supportValues = [...defaultSupport];
+        vipClients.forEach(c => {
+          const w = String(c.whatsapp_status ?? '');
+          const sp = String(c.support_status ?? '');
+          if (w && !whatsappValues.includes(w)) whatsappValues.push(w);
+          if (sp && !supportValues.includes(sp)) supportValues.push(sp);
+        });
 
         whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
           whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
@@ -1479,8 +1492,7 @@
             if (whatsapp && String(c.whatsapp_status || '') !== whatsapp) return false;
             if (support && String(c.support_status || '') !== support) return false;
             return true;
-          })
-          .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+          });
       }
 
       function updateVipSelectionUI(filteredData = null) {
@@ -1531,12 +1543,12 @@
           const tr = document.createElement('tr');
           const rowId = String(c.id);
           tr.className = `${selectedVipIds.has(rowId) ? 'bg-red-50/60' : 'hover:bg-amber-50/40'} transition`;
-          const phone = normalizePhoneNumber(c.phone || '');
+          const phone = String(c.phone ?? '');
           const waPhone = formatWhatsAppPhone(phone);
-          const normalizedWhatsapp = normalizeVipWhatsappStatus(c.whatsapp_status);
-          const normalizedSupport = normalizeVipSupportPeriod(c.support_status) || 'غير محدد';
-          const whatsOptions = buildVipStatusOptions(normalizedWhatsapp, ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
-          const supportOptions = buildVipStatusOptions(normalizedSupport, ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
+          const rawWhatsapp = String(c.whatsapp_status ?? '');
+          const rawSupport = String(c.support_status ?? '');
+          const whatsOptions = buildVipStatusOptions(rawWhatsapp, ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
+          const supportOptions = buildVipStatusOptions(rawSupport, ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
 
           tr.innerHTML = `
             <td class="p-3.5 text-center">
@@ -1683,9 +1695,6 @@
         const oldClient = vipClients.find(c => String(c.id) === String(id));
         if (!oldClient) return;
 
-        if (field === 'whatsapp_status') value = normalizeVipWhatsappStatus(value);
-        if (field === 'support_status') value = normalizeVipSupportPeriod(value) || 'غير محدد';
-        if (field === 'name') value = repairVipMojibake(value);
 
         const oldValue = oldClient[field] || '';
         oldClient[field] = value;
@@ -1933,7 +1942,7 @@
             const { data, error } = await supabase
               .from('vip_clients')
               .select('*')
-              .order('id', { ascending: false })
+              .order('id', { ascending: true })
               .range(from, from + batchSize - 1);
 
             if (error) throw error;
@@ -1946,12 +1955,8 @@
             }
           }
 
-          const cleanupResult = sanitizeVipRecords(allData);
-          vipClients = cleanupResult.clients;
-          if (cleanupResult.dirty.length > 0) {
-            if (statusEl) statusEl.innerText = `🧹 جاري تنظيف ${cleanupResult.dirty.length.toLocaleString('ar-EG')} سجل VIP قديم...`;
-            await persistVipCleanup(cleanupResult.dirty);
-          }
+          // مهم: بيانات VIP تُعرض كما هي مخزنة بدون أي تنظيف أو تعديل تلقائي.
+          vipClients = allData;
           const currentVipIds = new Set(vipClients.map(c => String(c.id)));
           selectedVipIds.forEach(id => { if (!currentVipIds.has(String(id))) selectedVipIds.delete(String(id)); });
           if (notice) notice.style.display = 'none';
@@ -2278,21 +2283,11 @@
         return map;
       }
 
-      function buildVipMapFromHeader(headerRow, dataRows) {
+      function buildVipMapFromHeader(headerRow) {
         const map = {};
         (headerRow || []).forEach((cell, idx) => {
           const field = getVipHeaderField(cell);
           if (field && map[field] === undefined) map[field] = idx;
-        });
-
-        const maxCols = Math.max(
-          (headerRow || []).length,
-          ...dataRows.slice(0, 50).map(r => (r || []).length),
-          0
-        );
-        const inferred = inferVipColumnMap(dataRows, maxCols);
-        Object.entries(inferred).forEach(([field, idx]) => {
-          if (map[field] === undefined) map[field] = idx;
         });
         return map;
       }
@@ -2319,52 +2314,77 @@
           raw: false,
           blankrows: false
         });
-        if (!matrix || matrix.length === 0) return { rows: [], detected: {}, skipped: 0 };
+        if (!matrix || matrix.length === 0) return { rows: [], skipped: 0, errors: [] };
 
         const headerIndex = findVipHeaderRow(matrix);
-        const dataRows = headerIndex >= 0 ? matrix.slice(headerIndex + 1) : matrix;
-        const headerRow = headerIndex >= 0 ? matrix[headerIndex] : [];
-        const map = buildVipMapFromHeader(headerRow, dataRows);
+        if (headerIndex < 0) {
+          return {
+            rows: [],
+            skipped: 0,
+            errors: [`Sheet "${sheetName}": لم أتعرف على صف العناوين. لازم يكون فيه عناوين واضحة مثل الاسم، الرقم، المبلغ.`]
+          };
+        }
+
+        const headerRow = matrix[headerIndex];
+        const dataRows = matrix.slice(headerIndex + 1);
+        const map = buildVipMapFromHeader(headerRow);
+        const missingRequired = ['name', 'phone', 'amount'].filter(field => map[field] === undefined);
+        if (missingRequired.length) {
+          const labels = { name: 'الاسم', phone: 'الرقم', amount: 'المبلغ' };
+          return {
+            rows: [],
+            skipped: 0,
+            errors: [`Sheet "${sheetName}": الأعمدة المطلوبة غير موجودة: ${missingRequired.map(f => labels[f]).join('، ')}.`]
+          };
+        }
+
         const get = (row, field) => map[field] !== undefined ? row[map[field]] : '';
-        const result = [];
+        const rows = [];
+        const errors = [];
         let skipped = 0;
 
-        dataRows.forEach(row => {
-          if (!row || !row.some(v => String(v ?? '').trim() !== '')) return;
-
-          // نتجاهل لو صف عناوين اتكرر في منتصف الشيت
-          if (scoreVipHeaderRow(row).fields.size >= 2) return;
-
-          const rawName = get(row, 'name');
-          const rawPhone = get(row, 'phone');
-          const phone = normalizePhoneNumber(convertArabicDigits(rawPhone));
-          let name = repairVipMojibake(rawName || '');
-          if (!name) name = repairVipMojibake(guessVipNameFromRow(row, map));
-
-          // لو مفيش اسم ولا رقم، الصف مالوش معنى كعميل
-          if (!name && !phone) {
+        dataRows.forEach((row, idx) => {
+          if (!row || !row.some(v => String(v ?? '') !== '')) {
             skipped++;
             return;
           }
 
-          const whatsappStatus = normalizeVipWhatsappStatus(get(row, 'whatsapp_status'));
-          const supportRaw = String(get(row, 'support_status') || '').trim();
-          const supportStatus = normalizeVipSupportPeriod(supportRaw) || 'غير محدد';
-          const amount = parseVipAmount(get(row, 'amount'));
-          const rawDate = String(get(row, 'date') || '').trim();
+          // لا نخمن ولا نصلح ولا نغير أي قيمة نصية من الشيت.
+          const name = String(get(row, 'name') ?? '');
+          const phone = String(get(row, 'phone') ?? '');
+          const whatsappStatus = String(get(row, 'whatsapp_status') ?? '');
+          const supportStatus = String(get(row, 'support_status') ?? '');
+          const rawAmount = get(row, 'amount');
+          const rawDate = String(get(row, 'date') ?? '');
 
-          result.push({
-            name: name || 'بدون اسم',
+          // المبلغ هو الحقل الوحيد الذي يجب أن يدخل قاعدة البيانات كرقم.
+          // لو القيمة غير رقمية نوقف الاستيراد بدل ما نخمن أو نستبدلها بقيمة أخرى.
+          let amount = 0;
+          if (String(rawAmount ?? '').trim() !== '') {
+            const amountText = convertArabicDigits(String(rawAmount))
+              .replace(/[٬,](?=\d{3}(\D|$))/g, '')
+              .replace(/٫/g, '.')
+              .replace(/[^0-9.\-]/g, '');
+            amount = Number(amountText);
+            if (!Number.isFinite(amount)) {
+              errors.push(`Sheet "${sheetName}" - صف ${headerIndex + idx + 2}: قيمة المبلغ "${String(rawAmount)}" غير رقمية.`);
+              return;
+            }
+          }
+
+          rows.push({
+            name,
             phone,
             whatsapp_status: whatsappStatus,
             support_status: supportStatus,
             amount,
             date: rawDate || todayStr,
-            _sheet: sheetName
+            _sheet: sheetName,
+            _sourceRow: headerIndex + idx + 2
           });
         });
 
-        return { rows: result, detected: map, skipped };
+        return { rows, skipped, errors };
       }
 
       async function importVipFile(file) {
@@ -2374,59 +2394,47 @@
         reader.onload = async function(evt) {
           try {
             const bytes = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(bytes, { type: 'array', cellDates: true });
+            const workbook = XLSX.read(bytes, { type: 'array', cellDates: false });
             const todayStr = new Date().toISOString().split('T')[0];
 
-            // بنقرأ كل الـSheets مش أول Sheet بس
-            let extracted = [];
+            let rows = [];
             let skippedRows = 0;
-            const detectedSheets = [];
+            const errors = [];
+            const importedSheets = [];
 
+            // نفس ترتيب الـSheets ونفس ترتيب الصفوف داخل كل Sheet.
             workbook.SheetNames.forEach(sheetName => {
               const worksheet = workbook.Sheets[sheetName];
               const parsed = extractVipRowsFromWorksheet(worksheet, sheetName, todayStr);
-              extracted = extracted.concat(parsed.rows);
-              skippedRows += parsed.skipped;
-              if (parsed.rows.length) detectedSheets.push(sheetName);
-            });
-
-            const existingPhones = new Set(
-              vipClients.map(c => normalizePhoneNumber(convertArabicDigits(c.phone))).filter(Boolean)
-            );
-            const seenPhones = new Set();
-            const seenNameOnly = new Set();
-            const rows = [];
-            let duplicateCount = 0;
-
-            extracted.forEach(row => {
-              const phone = normalizePhoneNumber(convertArabicDigits(row.phone));
-              const normalizedName = normalizeVipText(row.name);
-
-              if (phone) {
-                if (existingPhones.has(phone) || seenPhones.has(phone)) {
-                  duplicateCount++;
-                  return;
-                }
-                seenPhones.add(phone);
-              } else {
-                // لو مفيش رقم، نمنع تكرار نفس الاسم داخل نفس الملف فقط
-                if (normalizedName && seenNameOnly.has(normalizedName)) {
-                  duplicateCount++;
-                  return;
-                }
-                if (normalizedName) seenNameOnly.add(normalizedName);
+              skippedRows += parsed.skipped || 0;
+              if (parsed.errors && parsed.errors.length) errors.push(...parsed.errors);
+              if (parsed.rows && parsed.rows.length) {
+                importedSheets.push(sheetName);
+                parsed.rows.forEach(row => {
+                  const cleanRow = { ...row };
+                  delete cleanRow._sheet;
+                  delete cleanRow._sourceRow;
+                  rows.push(cleanRow);
+                });
               }
-
-              const cleanRow = { ...row, phone };
-              delete cleanRow._sheet;
-              rows.push(cleanRow);
             });
 
-            if (rows.length === 0) {
-              alert(`لم يتم العثور على بيانات VIP جديدة قابلة للاستيراد.\nالمكرر: ${duplicateCount.toLocaleString('ar-EG')}\nالصفوف المتجاهلة: ${skippedRows.toLocaleString('ar-EG')}`);
+            if (errors.length) {
+              alert(
+                '⛔ تم إيقاف الاستيراد بدون إضافة أي صف، لأننا لن نخمن أو نغير بيانات الشيت.\n\n' +
+                errors.slice(0, 8).join('\n') +
+                (errors.length > 8 ? `\n... و${errors.length - 8} مشكلة أخرى.` : '')
+              );
               return;
             }
 
+            if (rows.length === 0) {
+              alert('لم يتم العثور على صفوف بيانات قابلة للاستيراد. لم يتم تعديل أي بيانات.');
+              return;
+            }
+
+            // لا حذف مكرر، لا تغيير أسماء، لا Normalize للحالات، ولا تعديل للأرقام.
+            // كل صف في الشيت يتم إدخاله بنفس ترتيبه.
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {
               const chunk = rows.slice(i, i + chunkSize);
@@ -2438,20 +2446,20 @@
               'VIP استيراد',
               currentUser ? currentUser.name : 'النظام',
               `${rows.length} عميل VIP`,
-              `استيراد ذكي من ${detectedSheets.length || workbook.SheetNames.length} Sheet: تم رفع ${rows.length} وتخطي ${duplicateCount} مكرر و${skippedRows} صف غير صالح`
+              `استيراد حرفي بدون تخمين أو تعديل من ${importedSheets.length} Sheet، بنفس ترتيب الصفوف`
             );
 
             alert(
-              `✅ تم استيراد الشيت تلقائياً بنجاح.\n` +
-              `👥 تم إضافة: ${rows.length.toLocaleString('ar-EG')} عميل VIP\n` +
-              `🧹 تم تخطي المكرر: ${duplicateCount.toLocaleString('ar-EG')}\n` +
-              `↪️ صفوف غير صالحة/فارغة: ${skippedRows.toLocaleString('ar-EG')}\n` +
-              `📄 تم فحص: ${workbook.SheetNames.length.toLocaleString('ar-EG')} Sheet`
+              `✅ تم رفع الشيت كما هو.\n` +
+              `👥 تم إضافة ${rows.length.toLocaleString('ar-EG')} صف بنفس ترتيب الشيت.\n` +
+              `🚫 بدون حذف مكرر أو تعديل أسماء/أرقام/حالات/مبالغ.\n` +
+              (skippedRows ? `↪️ تم تجاهل ${skippedRows.toLocaleString('ar-EG')} صف فارغ فقط.\n` : '') +
+              `📄 Sheets: ${importedSheets.join('، ') || workbook.SheetNames.join('، ')}`
             );
             await fetchVipClientsFromCloud();
           } catch (e) {
-            console.error('VIP smart import error:', e);
-            alert('تعذر قراءة شيت VIP تلقائياً: ' + (e.message || e));
+            console.error('VIP exact import error:', e);
+            alert('تعذر رفع شيت VIP كما هو: ' + (e.message || e));
           }
         };
         reader.readAsArrayBuffer(file);
@@ -2467,7 +2475,7 @@
 
         const exportData = data.map(c => ({
           'الاسم': c.name || '',
-          'الرقم': normalizePhoneNumber(c.phone || ''),
+          'الرقم': c.phone || '',
           'التواصل واتس اب': c.whatsapp_status || '',
           'حالة الدعم': c.support_status || '',
           'المبلغ': c.amount || 0,
@@ -2525,7 +2533,7 @@
             const { data, error } = await supabase
               .from('clients')
               .select('*')
-              .order('id', { ascending: false })
+              .order('id', { ascending: true })
               .range(from, from + batchSize - 1);
 
             if (error) {
