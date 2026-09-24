@@ -1696,8 +1696,13 @@
           normalizePhoneNumber(c.phone || '') === newPhone
         );
         if (duplicate) {
-          alert(`الرقم ${newPhone} مسجل بالفعل باسم: ${duplicate.name || 'بدون اسم'}`);
-          return;
+          const duplicateName = String(duplicate.name || 'بدون اسم').trim() || 'بدون اسم';
+          const confirmed = confirm(
+            `⚠️ الرقم ${newPhone} موجود بالفعل في سجل VIP آخر باسم: ${duplicateName}\n\n` +
+            `لو الرقم الحالي كان مكتوب غلط وعايز تستخدم الرقم ده رغم التكرار، اضغط موافق.\n` +
+            `لو مش عايز تعمل التعديل، اضغط إلغاء.`
+          );
+          if (!confirmed) return;
         }
 
         await updateVipClientField(id, 'phone', newPhone);
