@@ -29,31 +29,31 @@
       font-weight: 800 !important;
     }
 
-    /* جدول VIP مضغوط: نقلّل الفراغات بين الأعمدة ونمنع قص الأزرار */
+    /* جدول VIP بعرض الكارت بالكامل: بدون فراغات جانبية وهمية */
     #vipTable {
-      width: 920px;
-      min-width: 920px;
-      max-width: 100%;
+      width: 100%;
+      min-width: 1120px;
+      max-width: none;
       table-layout: fixed;
       border-collapse: collapse;
-      margin-inline: auto;
+      margin: 0;
     }
     #vipTable th,
     #vipTable td {
-      padding: 7px 5px !important;
+      padding: 8px 7px !important;
       vertical-align: middle;
     }
 
-    /* توزيع محكوم للمساحات بدل الأعمدة الواسعة القديمة */
-    #vipTable th:nth-child(1), #vipTable td:nth-child(1) { width: 28px; text-align: center; white-space: nowrap; }
-    #vipTable th:nth-child(2), #vipTable td:nth-child(2) { width: 30px; text-align: center; white-space: nowrap; }
-    #vipTable th:nth-child(3), #vipTable td:nth-child(3) { width: 145px; }
-    #vipTable th:nth-child(4), #vipTable td:nth-child(4) { width: 175px; }
-    #vipTable th:nth-child(5), #vipTable td:nth-child(5) { width: 105px; white-space: nowrap; }
-    #vipTable th:nth-child(6), #vipTable td:nth-child(6) { width: 115px; white-space: nowrap; }
-    #vipTable th:nth-child(7), #vipTable td:nth-child(7) { width: 105px; white-space: nowrap; }
-    #vipTable th:nth-child(8), #vipTable td:nth-child(8) { width: 82px; text-align: center; white-space: nowrap; }
-    #vipTable th:nth-child(9), #vipTable td:nth-child(9) { width: 135px; text-align: center; white-space: nowrap; }
+    /* توزيع نسبي للعرض عشان الجدول يتمدد مع الشاشة بشكل متوازن */
+    #vipTable th:nth-child(1), #vipTable td:nth-child(1) { width: 3.2%; text-align: center; white-space: nowrap; }
+    #vipTable th:nth-child(2), #vipTable td:nth-child(2) { width: 3.2%; text-align: center; white-space: nowrap; }
+    #vipTable th:nth-child(3), #vipTable td:nth-child(3) { width: 18%; }
+    #vipTable th:nth-child(4), #vipTable td:nth-child(4) { width: 19%; }
+    #vipTable th:nth-child(5), #vipTable td:nth-child(5) { width: 11%; white-space: nowrap; }
+    #vipTable th:nth-child(6), #vipTable td:nth-child(6) { width: 12%; white-space: nowrap; }
+    #vipTable th:nth-child(7), #vipTable td:nth-child(7) { width: 12%; white-space: nowrap; }
+    #vipTable th:nth-child(8), #vipTable td:nth-child(8) { width: 9%; text-align: center; white-space: nowrap; }
+    #vipTable th:nth-child(9), #vipTable td:nth-child(9) { width: 12.6%; text-align: center; white-space: nowrap; }
 
     #vipTable td:nth-child(3) {
       overflow-wrap: anywhere;
@@ -107,12 +107,11 @@
       padding-inline: 6px !important;
     }
 
-    @media (max-width: 960px) {
+    @media (max-width: 1120px) {
       #vipTable {
-        width: 920px;
-        min-width: 920px;
+        width: 1120px;
+        min-width: 1120px;
         max-width: none;
-        margin-inline: 0;
       }
     }
 
