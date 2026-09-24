@@ -65,6 +65,115 @@
         table-layout: fixed;
       }
     }
+
+
+    /* ================= نظام موحد للأزرار ================= */
+    button,
+    a[href*="wa.me"] {
+      font-family: 'Cairo', sans-serif;
+      line-height: 1.25;
+      transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease, opacity .18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #mainApp button:not(.tab-btn),
+    #loginScreen button,
+    #clientModal button,
+    #vipClientModal button,
+    #employeeModal button,
+    #monthlyModal button,
+    #adminHistoryModal button,
+    #monthlyFollowUpModal button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    #mainApp button:not(.tab-btn):not([id^="close"]):not(#closeMonthlyFollowUpBtn) {
+      min-height: 36px;
+    }
+
+    #mainApp .section-btn {
+      min-height: 40px !important;
+      padding: 8px 18px !important;
+      border-radius: 10px !important;
+    }
+
+    #mainApp .tab-btn {
+      min-height: 32px;
+      padding: 4px 8px 7px !important;
+      border-radius: 0 !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    #vipTable button {
+      min-height: 30px !important;
+      padding: 6px 9px !important;
+      border-radius: 9px !important;
+      font-size: 11px !important;
+      line-height: 1.15 !important;
+    }
+
+    #vipTable a[href*="wa.me"],
+    #tableBody a[href*="wa.me"] {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 6px 9px !important;
+      border-radius: 9px !important;
+      font-size: 11px !important;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    #tableBody .edit-btn,
+    #tableBody .del-btn {
+      min-height: 30px;
+      padding: 5px 10px !important;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-weight: 700 !important;
+    }
+    #tableBody .edit-btn {
+      background: #eff6ff;
+      color: #1d4ed8 !important;
+      border-color: #dbeafe;
+    }
+    #tableBody .edit-btn:hover { background: #dbeafe; }
+    #tableBody .del-btn {
+      background: #fff1f2;
+      color: #be123c !important;
+      border-color: #ffe4e6;
+    }
+    #tableBody .del-btn:hover { background: #ffe4e6; }
+
+    #paginationControls button {
+      min-width: 36px;
+      min-height: 34px;
+      padding: 6px 10px !important;
+      border-radius: 9px !important;
+    }
+
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:focus-visible,
+    a[href*="wa.me"]:focus-visible {
+      outline: 3px solid rgba(59, 130, 246, .18);
+      outline-offset: 2px;
+    }
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed !important;
+      transform: none !important;
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800 p-4 md:p-6 min-h-screen">
@@ -927,6 +1036,8 @@
       let pageSize = 50;
       let searchDebounceTimer = null;
       let followUpPopupShownForSession = false;
+      let vipCleanupActive = false;
+      let vipRealtimeRefreshTimer = null;
 
       // جلب كلمات السر المحدثة من السحابة لتعمل على كل الأجهزة
       async function fetchSettingsFromCloud() {
@@ -1273,21 +1384,16 @@
 
         const currentWhats = whatsappFilter.value;
         const currentSupport = supportFilter.value;
-
-        const whatsappValues = [...new Set(vipClients.map(c => String(c.whatsapp_status || '').trim()).filter(Boolean))]
-          .sort((a, b) => a.localeCompare(b, 'ar'));
-        const fixedSupportValues = ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'];
-        const existingSupportValues = [...new Set(vipClients.map(c => String(c.support_status || '').trim()).filter(Boolean))]
-          .sort((a, b) => a.localeCompare(b, 'ar'));
-        const supportValues = [...fixedSupportValues, ...existingSupportValues.filter(v => !fixedSupportValues.includes(v))];
+        const whatsappValues = ['لم يتم', 'تم', 'لم يرد', 'متابعة'];
+        const supportValues = ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي'];
 
         whatsappFilter.innerHTML = '<option value="">كل حالات واتساب</option>' +
           whatsappValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
         supportFilter.innerHTML = '<option value="">كل حالات الدعم</option>' +
           supportValues.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
 
-        if (whatsappValues.includes(currentWhats)) whatsappFilter.value = currentWhats;
-        if (supportValues.includes(currentSupport)) supportFilter.value = currentSupport;
+        whatsappFilter.value = whatsappValues.includes(currentWhats) ? currentWhats : '';
+        supportFilter.value = supportValues.includes(currentSupport) ? currentSupport : '';
       }
 
       function updateVipDashboard() {
@@ -1378,8 +1484,10 @@
           tr.className = `${selectedVipIds.has(rowId) ? 'bg-red-50/60' : 'hover:bg-amber-50/40'} transition`;
           const phone = normalizePhoneNumber(c.phone || '');
           const waPhone = formatWhatsAppPhone(phone);
-          const whatsOptions = buildVipStatusOptions(c.whatsapp_status || 'لم يتم', ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
-          const supportOptions = buildVipStatusOptions(c.support_status || 'غير محدد', ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
+          const normalizedWhatsapp = normalizeVipWhatsappStatus(c.whatsapp_status);
+          const normalizedSupport = normalizeVipSupportPeriod(c.support_status) || 'غير محدد';
+          const whatsOptions = buildVipStatusOptions(normalizedWhatsapp, ['لم يتم', 'تم', 'لم يرد', 'متابعة']);
+          const supportOptions = buildVipStatusOptions(normalizedSupport, ['غير محدد', 'شهري', 'كل 3 شهور', 'كل 6 شهور', 'سنوي']);
 
           tr.innerHTML = `
             <td class="p-3.5 text-center">
@@ -1525,6 +1633,10 @@
 
         const oldClient = vipClients.find(c => String(c.id) === String(id));
         if (!oldClient) return;
+
+        if (field === 'whatsapp_status') value = normalizeVipWhatsappStatus(value);
+        if (field === 'support_status') value = normalizeVipSupportPeriod(value) || 'غير محدد';
+        if (field === 'name') value = repairVipMojibake(value);
 
         const oldValue = oldClient[field] || '';
         oldClient[field] = value;
@@ -1785,7 +1897,12 @@
             }
           }
 
-          vipClients = allData;
+          const cleanupResult = sanitizeVipRecords(allData);
+          vipClients = cleanupResult.clients;
+          if (cleanupResult.dirty.length > 0) {
+            if (statusEl) statusEl.innerText = `🧹 جاري تنظيف ${cleanupResult.dirty.length.toLocaleString('ar-EG')} سجل VIP قديم...`;
+            await persistVipCleanup(cleanupResult.dirty);
+          }
           const currentVipIds = new Set(vipClients.map(c => String(c.id)));
           selectedVipIds.forEach(id => { if (!currentVipIds.has(String(id))) selectedVipIds.delete(String(id)); });
           if (notice) notice.style.display = 'none';
@@ -1810,6 +1927,95 @@
       // ================= استيراد VIP الذكي =================
       // الفكرة: المستخدم يرفع Excel/CSV بأي ترتيب للأعمدة تقريباً،
       // والنظام يكتشف صف العناوين والأعمدة من الاسم أو من شكل البيانات نفسها.
+      function repairVipMojibake(value) {
+        let text = String(value ?? '').trim();
+        if (!text) return '';
+
+        // أشهر علامات الـ UTF-8 المقروء كلاتيني بالخطأ: Ø / Ù / Ã / Â
+        const looksBroken = str => /[ØÙÃÂ]/.test(str);
+        const arabicCount = str => (str.match(/[\u0600-\u06FF]/g) || []).length;
+        const brokenCount = str => (str.match(/[ØÙÃÂ]/g) || []).length;
+
+        for (let pass = 0; pass < 2 && looksBroken(text); pass++) {
+          try {
+            const bytes = Uint8Array.from(Array.from(text).map(ch => ch.charCodeAt(0) & 0xFF));
+            const decoded = new TextDecoder('utf-8').decode(bytes).trim();
+            if (!decoded || decoded.includes('�')) break;
+
+            const improved = arabicCount(decoded) > arabicCount(text) || brokenCount(decoded) < brokenCount(text);
+            if (!improved) break;
+            text = decoded;
+          } catch (e) {
+            break;
+          }
+        }
+        return text;
+      }
+
+      function sanitizeVipRecords(records) {
+        const clientsClean = [];
+        const dirty = [];
+
+        (records || []).forEach(record => {
+          const original = { ...record };
+          const clean = { ...record };
+          const changes = {};
+
+          const repairedName = repairVipMojibake(original.name || '');
+          if (repairedName && repairedName !== String(original.name || '').trim()) {
+            clean.name = repairedName;
+            changes.name = repairedName;
+          }
+
+          const cleanWhatsapp = normalizeVipWhatsappStatus(original.whatsapp_status);
+          if (cleanWhatsapp !== String(original.whatsapp_status || '').trim()) {
+            clean.whatsapp_status = cleanWhatsapp;
+            changes.whatsapp_status = cleanWhatsapp;
+          }
+
+          const cleanSupport = normalizeVipSupportPeriod(original.support_status) || 'غير محدد';
+          if (cleanSupport !== String(original.support_status || '').trim()) {
+            clean.support_status = cleanSupport;
+            changes.support_status = cleanSupport;
+          }
+
+          clientsClean.push(clean);
+          if (Object.keys(changes).length > 0 && original.id !== undefined && original.id !== null) {
+            dirty.push({ id: original.id, changes });
+          }
+        });
+
+        return { clients: clientsClean, dirty };
+      }
+
+      async function persistVipCleanup(dirtyRows) {
+        if (!supabase || !dirtyRows || dirtyRows.length === 0 || vipCleanupActive) return 0;
+        vipCleanupActive = true;
+        let updated = 0;
+
+        try {
+          const chunkSize = 20;
+          for (let i = 0; i < dirtyRows.length; i += chunkSize) {
+            const chunk = dirtyRows.slice(i, i + chunkSize);
+            const results = await Promise.all(chunk.map(item =>
+              supabase
+                .from('vip_clients')
+                .update({ ...item.changes, updated_at: new Date().toISOString() })
+                .eq('id', item.id)
+            ));
+            results.forEach(result => {
+              if (result && result.error) console.warn('VIP cleanup row warning:', result.error);
+              else updated++;
+            });
+          }
+        } catch (e) {
+          console.warn('VIP cleanup warning:', e);
+        } finally {
+          vipCleanupActive = false;
+        }
+        return updated;
+      }
+
       function normalizeVipText(value) {
         return String(value ?? '')
           .trim()
@@ -1928,14 +2134,15 @@
       }
 
       function normalizeVipWhatsappStatus(value) {
-        const raw = String(value ?? '').trim();
+        const raw = repairVipMojibake(value);
         if (!raw) return 'لم يتم';
         const n = normalizeVipText(raw);
         if (n.includes('لميرد') || n.includes('noanswer') || n.includes('noreply')) return 'لم يرد';
         if (n.includes('متابعه') || n.includes('تذكير') || n.includes('followup') || n.includes('reminder')) return 'متابعة';
-        if (n.includes('لميتم') || n.includes('notcontacted') || n.includes('pending') || n === 'لا' || n === 'no') return 'لم يتم';
+        if (n.includes('لميتم') || n.includes('notcontacted') || n.includes('pending') || n === 'لا' || n === 'no' || n === 'جديد' || n.includes('new')) return 'لم يتم';
         if (n === 'تم' || n.includes('تمالتواصل') || n.includes('contacted') || n.includes('done') || n.includes('completed') || n === 'yes' || n === 'نعم') return 'تم';
-        return raw;
+        // أي قيمة قديمة/مشوهة غير معروفة لا تظهر كاختيار جديد في الواجهة
+        return 'لم يتم';
       }
 
       function looksLikeVipWhatsappStatus(value) {
@@ -1946,16 +2153,18 @@
       }
 
       function normalizeVipSupportPeriod(value) {
-        const raw = String(value ?? '').trim();
-        if (!raw) return '';
+        const raw = repairVipMojibake(value);
+        if (!raw) return 'غير محدد';
         const n = normalizeVipText(convertArabicDigits(raw));
 
+        if (n === 'غيرمحدد' || n === 'غيرمعلوم' || n === 'unknown' || n === 'none' || n === 'na' || n === 'جديد' || n === 'new') return 'غير محدد';
         if (n === 'شهري' || n.includes('كلشهر') || n.includes('شهريا') || n.includes('شهرياً') || n.includes('monthly') || n === '1month' || n === 'month') return 'شهري';
         if (n.includes('3شهور') || n.includes('3اشهر') || n.includes('ثلاثشهور') || n.includes('ثلاثهاشهر') || n.includes('كل3') || n.includes('quarterly') || n.includes('3months') || n.includes('threemonths')) return 'كل 3 شهور';
-        if (n.includes('6شهور') || n.includes('6اشهر') || n.includes('ستشهور') || n.includes('ستهاشهر') || n.includes('كل6') || n.includes('semiannual') || n.includes('semiannual') || n.includes('6months') || n.includes('sixmonths')) return 'كل 6 شهور';
+        if (n.includes('6شهور') || n.includes('6اشهر') || n.includes('ستشهور') || n.includes('ستهاشهر') || n.includes('كل6') || n.includes('semiannual') || n.includes('6months') || n.includes('sixmonths')) return 'كل 6 شهور';
         if (n.includes('سنوي') || n.includes('سنه') || n.includes('سنة') || n.includes('كلسنه') || n.includes('كلسنة') || n.includes('annual') || n.includes('yearly') || n.includes('12months') || n.includes('1year')) return 'سنوي';
 
-        return raw;
+        // أي قيمة قديمة أو ترميز مشوه لا نضيفها كحالة جديدة
+        return 'غير محدد';
       }
 
       function looksLikeVipSupportStatus(value) {
@@ -2080,8 +2289,8 @@
           const rawName = get(row, 'name');
           const rawPhone = get(row, 'phone');
           const phone = normalizePhoneNumber(convertArabicDigits(rawPhone));
-          let name = String(rawName || '').trim();
-          if (!name) name = guessVipNameFromRow(row, map);
+          let name = repairVipMojibake(rawName || '');
+          if (!name) name = repairVipMojibake(guessVipNameFromRow(row, map));
 
           // لو مفيش اسم ولا رقم، الصف مالوش معنى كعميل
           if (!name && !phone) {
@@ -2323,7 +2532,11 @@
           supabase
             .channel('vip_clients_db_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'vip_clients' }, () => {
-              if (canAccessVip()) fetchVipClientsFromCloud();
+              if (!canAccessVip() || vipCleanupActive) return;
+              clearTimeout(vipRealtimeRefreshTimer);
+              vipRealtimeRefreshTimer = setTimeout(() => {
+                if (!vipCleanupActive && canAccessVip()) fetchVipClientsFromCloud();
+              }, 450);
             })
             .subscribe();
 
